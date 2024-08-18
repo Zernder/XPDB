@@ -1,0 +1,7 @@
+
+.env
+/Discordbotenv
+/Cogs/__pycache__
+/venv
+updatebot.bat
+runbot.bat
