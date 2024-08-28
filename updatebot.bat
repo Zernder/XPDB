@@ -1,6 +1,6 @@
-python -m venv Discordbotenv
+python -m venv venv
 
-call Discordbotenv\Scripts\activate
+call venv\Scripts\activate
 
 pip install -r piplist.txt
 

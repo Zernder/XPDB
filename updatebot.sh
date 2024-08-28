@@ -4,9 +4,9 @@ sudo chown -R xanmal:xanmal /home/xanmal/xanfiles/servers/DiscordBot
 
 chmod -R +x /home/xanmal/xanfiles/servers/DiscordBot
 
-python3 -m venv Discordbotenv
+python3 -m venv venv
 
-source Discordbotenv/bin/activate
+source venv/bin/activate
 
 pip install -r piplist.txt
 
