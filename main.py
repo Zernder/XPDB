@@ -5,13 +5,14 @@ from discord.ext import commands
 import requests
 from dotenv import load_dotenv
 import argparse
+import ollama
 
 load_dotenv()
-ollamaurl = 'http://127.0.0.1:11434/api/chat'
 
 parser = argparse.ArgumentParser(description="Run TamaBot or SakiBot")
 parser.add_argument("bot", choices=["tama", "saki"], help="Specify the bot to run (tama or saki)")
 args = parser.parse_args()
+
 
 class DiscordBotBase:
     def __init__(self, command_prefix, intents, token, chat_channel):
@@ -20,6 +21,10 @@ class DiscordBotBase:
         self.token = token
         self.chat_channel = chat_channel
         self.user_message_log = {}
+
+        # Register event handlers
+        self.client.event(self.on_ready)
+        self.client.event(self.on_message)
 
     def log_message(self, author_id, content):
         if author_id not in self.user_message_log:
@@ -46,72 +51,67 @@ class DiscordBotBase:
             print(f"An error occurred in on_ready: {e}")
 
     async def on_message(self, message):
+        if message.author.bot:
+            return
+        
         try:
-            if message.content.startswith('!'):
-                await self.client.process_commands(message)
-                return
-            if message.author.bot:
-                return
-            if any(name.lower() in message.content.lower() for name in self.tama_names):
-                payload = {"model": self.model_name, "messages": [{"role": "user", "content": message.content}], "stream": False}
-                response = requests.post(ollamaurl, json=payload)
-                response_data = response.json()
-                response_text = response_data.get("message", {}).get("content", "")
-                await message.channel.send(response_text)
+            response = ollama.chat(
+                model='Tamaneko',
+                messages=[{'role': 'user', 'content': message.content}],
+                stream=False,
+            )
+            AIResponse = response['message']['content']
+            print(f"AI Response: {AIResponse}")
+            await message.channel.send(AIResponse)
         except Exception as e:
-            print(f"Error in on_message: {str(e)}")
-        await self.client.process_commands(message)
+            print(f"An error occurred in on_message: {e}")
+
 
 class TamaBot(DiscordBotBase):
     def __init__(self):
         super().__init__(command_prefix=["!"], intents=discord.Intents.all(), token=os.getenv("TamaToken"), chat_channel=os.getenv("ChatChannel"))
         self.model_name = "Tamaneko"
-        self.tama_names = ["tama", "tamaneko"]
+        self.botNames = ["tama", "tamaneko"]
+
+    async def load_cogs(self):
+        await self.client.load_extension(f'Cogs.ModerationCog')
+        # await self.client.load_extension(f'Cogs.MusicCog')
+  
 
 class SakiBot(DiscordBotBase):
     def __init__(self):
         super().__init__(command_prefix=["saki"], intents=discord.Intents.all(), token=os.getenv("SakiToken"), chat_channel=os.getenv("ChatChannel"))
         self.model_name = "Autumn"
-        self.tama_names = ["saki", "autumn"]
+        self.botNames = ["saki", "autumn"]
+
+    async def load_cogs(self):
+        await self.client.load_extension(f'Cogs.ModerationCog')
+        # await self.client.load_extension(f'Cogs.MusicCog')
+  
 
 class Cog:
     def __init__(self, client):
         self.client = client
 
-    async def reload(self, ctx, extension):
-        extension_name = f'Cogs.{extension}'
-        if extension_name in self.client.extensions:
-            try:
-                await self.client.unload_extension(extension_name)
-            except Exception as e:
-                await ctx.send(f'Could not unload the extension {extension}. Error: {e}')
-                return
-        else:
-            await ctx.send(f'The extension {extension} is not loaded, attempting to load...')
-
-    async def load_cogs(self):
-        try:
-            for filename in os.listdir('./Cogs'):
-                if filename.endswith('.py'):
-                    await self.client.load_extension(f'Cogs.{filename[:-3]}')
-                else:
-                    print(f'Unable to load {filename[:-3]}')
-        except FileNotFoundError as e:
-            print(f"Failed to load cogs: {e}")
-
-
+  
+    async def remove_cogs(self):
+        await self.client.remove_cog(f'Cogs.ModerationCog')
+        await self.client.remove_cog(f'Cogs.MusicCog')
 
 
 async def main():
+    
     if args.bot == "tama":
         bot = TamaBot()
+        await Cog.remove_cogs(bot)
+        await TamaBot.load_cogs(bot)
     elif args.bot == "saki":
         bot = SakiBot()
-
-    cog = Cog(bot.client)
-    await cog.load_cogs()
+        await Cog.remove_cogs(bot)
+        await SakiBot.load_cogs(bot)
     print(f"{args.bot.capitalize()} Online")
     await bot.client.start(bot.token)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
