@@ -2,113 +2,174 @@ import os
 import asyncio
 import discord
 from discord.ext import commands
-import requests
+import random
 from dotenv import load_dotenv
 import argparse
 import ollama
+import json
 
 load_dotenv()
 
 parser = argparse.ArgumentParser(description="Run TamaBot or SakiBot")
-parser.add_argument("bot", choices=["tama", "saki"], help="Specify the bot to run (tama or saki)")
+parser.add_argument("bot", choices=["tama", "saki"], help="Specify the bot to run (tama or saki)", nargs="?", default="tama")
 args = parser.parse_args()
 
 
+def GenerateResponse(message, modelName):
+    try:
+        response = ollama.chat(
+            model=modelName,
+            messages=[{'role': 'user', 'content': message.content}],
+            stream=False,
+        )
+        AIResponse = response['message']['content']
+        return AIResponse
+    except Exception as e:
+        print(f"An error occurred in GenerateResponse: {e}")
+        return None
+
+
+def GenerateGameList():
+    # Path to the bot folder
+    bot_directory = os.path.dirname(os.path.abspath(__file__))
+    game_list_file = os.path.join(bot_directory, "GameList.json")
+
+    games = []
+
+    # Read games from GameList.json in the bot folder
+    try:
+        with open(game_list_file, "r") as file:
+            gamelist = json.load(file)["games"]
+            games.extend(gamelist)
+        print(f"Loaded {len(gamelist)} games from GameList.json")
+    except FileNotFoundError:
+        print(f"GameList.json not found: {game_list_file}")
+    except json.JSONDecodeError as e:
+        print(f"Error parsing GameList.json: {e}")
+    except KeyError:
+        print("'games' key not found in GameList.json")
+
+    steam_directory = os.path.join(r"C:\\Program Files (x86)\\Steam\\steamapps\\common")
+    if os.path.isdir(steam_directory):
+        try:
+            steam_games = [name for name in os.listdir(steam_directory) if os.path.isdir(os.path.join(steam_directory, name))]
+            games.extend(steam_games)
+            print(f"Found {len(steam_games)} games in Steam directory")
+        except Exception as e:
+            print(f"Error accessing Steam directory {steam_directory}: {e}")
+
+    print(f"Total games found: {len(games)}")
+    return games
+
+async def SetActivity(self):
+    while True:
+        print("SetActivity function called")  # Debug print
+        try:
+            games = GenerateGameList()
+            print(f"Found {len(games)} games")  # Debug print
+            if not games:
+                print("No games found.")
+                return
+
+            game = random.choice(games)
+            print(f"Changing status to: {game}")  # Debug print
+            await self.client.change_presence(status=discord.Status.online, activity=discord.Game(name=game))
+            print("Status changed successfully")  # Debug print
+            print("Activity loop started")
+            await asyncio.sleep(43200)
+                
+        except Exception as e:
+            print(f"An error occurred in SetActivity: {e}")
+
+
 class DiscordBotBase:
-    def __init__(self, command_prefix, intents, token, chat_channel):
-        self.client = commands.Bot(command_prefix=command_prefix, case_insensitive=True, intents=intents)
+    def __init__(self, modelName, commandPrefix, intents, token, chatChannel):
+        self.client = commands.Bot(command_prefix=commandPrefix, case_insensitive=True, intents=intents)
         self.client.chatlog_dir = "logs/"
         self.token = token
-        self.chat_channel = chat_channel
-        self.user_message_log = {}
+        self.chatChannel = chatChannel
+        self.modelName = modelName
 
-        # Register event handlers
         self.client.event(self.on_ready)
         self.client.event(self.on_message)
 
-    def log_message(self, author_id, content):
-        if author_id not in self.user_message_log:
-            self.user_message_log[author_id] = []
-        self.user_message_log[author_id].append({"role": "user", "content": content})
-
     async def on_ready(self):
-        try:
-            guild = discord.utils.get(self.client.guilds, id=945718319007285310)
-            if guild:
-                print(f"Guild found: {guild.name}")
-            else:
-                print("Guild not found")
-                return
-            channel = discord.utils.get(guild.text_channels, name=self.chat_channel)
-            messages = []
-            async for message in channel.history(limit=10):
-                messages.append(message)
-            for message in messages:
-                if message.author.bot:
-                    continue
-                self.log_message(message.author.id, message.content)
-        except Exception as e:
-            print(f"An error occurred in on_ready: {e}")
+        self.client.loop.create_task(SetActivity(self))
+        channel = discord.utils.get(name=self.chatChannel)
+        messages = []
+        async for message in channel.history(limit=10):
+            messages.append(message)
+        for message in messages:
+            if message.author.bot:
+                continue
 
     async def on_message(self, message):
-        if message.author.bot:
+        if message.author.bot or message.content.startswith("!"):
             return
+
+        if message.channel.name == self.chatChannel:
+            AIResponse = GenerateResponse(message, self.modelName)
+            if AIResponse:
+                await message.channel.send(AIResponse)
         
-        try:
-            response = ollama.chat(
-                model='Tamaneko',
-                messages=[{'role': 'user', 'content': message.content}],
-                stream=False,
-            )
-            AIResponse = response['message']['content']
-            print(f"AI Response: {AIResponse}")
-            await message.channel.send(AIResponse)
-        except Exception as e:
-            print(f"An error occurred in on_message: {e}")
+        elif "tama" in message.content.lower() or "saki" in message.content.lower():
+            AIResponse = GenerateResponse(message, self.modelName)
+            if AIResponse:
+                await message.channel.send(AIResponse)
+    
+        elif message.channel.name != self.chatChannel:
+            rand = random.randrange(0, 6)
+            if rand == 0:
+                AIResponse = GenerateResponse(message)
+                if AIResponse:
+                    await message.channel.send(AIResponse)
 
 
 class TamaBot(DiscordBotBase):
     def __init__(self):
-        super().__init__(command_prefix=["!"], intents=discord.Intents.all(), token=os.getenv("TamaToken"), chat_channel=os.getenv("ChatChannel"))
-        self.model_name = "Tamaneko"
+        super().__init__(modelName="Tamaneko", commandPrefix=["tama"], intents=discord.Intents.all(), token=os.getenv("TamaToken"), chatChannel=os.getenv("ChatChannel"))
         self.botNames = ["tama", "tamaneko"]
 
-    async def load_cogs(self):
-        await self.client.load_extension(f'Cogs.ModerationCog')
-        # await self.client.load_extension(f'Cogs.MusicCog')
-  
+    async def on_ready(self):
+        await super().on_ready()
+
 
 class SakiBot(DiscordBotBase):
     def __init__(self):
-        super().__init__(command_prefix=["saki"], intents=discord.Intents.all(), token=os.getenv("SakiToken"), chat_channel=os.getenv("ChatChannel"))
-        self.model_name = "Autumn"
+        super().__init__(modelName="Autumn", commandPrefix=["saki"], intents=discord.Intents.all(), token=os.getenv("SakiToken"), chatChannel=os.getenv("ChatChannel"))
+        # self.modelName = "Autumn"
         self.botNames = ["saki", "autumn"]
 
-    async def load_cogs(self):
-        await self.client.load_extension(f'Cogs.ModerationCog')
-        # await self.client.load_extension(f'Cogs.MusicCog')
-  
+    async def on_ready(self):
+        await super().on_ready()
+
 
 class Cog:
     def __init__(self, client):
         self.client = client
 
-  
-    async def remove_cogs(self):
-        await self.client.remove_cog(f'Cogs.ModerationCog')
-        await self.client.remove_cog(f'Cogs.MusicCog')
+    async def load_cogs(self):
+        if args.bot == "tama":
+            await self.client.load_extension('Cogs.ModerationCog')
+            await self.client.load_extension('Cogs.MusicCog')
 
+        elif args.bot == "saki":
+            await self.client.load_extension('Cogs.ModerationCog')
+            await self.client.load_extension('Cogs.QuizCog')
+            
+
+    async def remove_cogs(self):
+        await self.client.remove_cog('Cogs.ModerationCog')
+        await self.client.remove_cog('Cogs.MusicCog')
+        await self.client.remove_cog('Cogs.QuizCog')
 
 async def main():
-    
     if args.bot == "tama":
         bot = TamaBot()
-        await Cog.remove_cogs(bot)
-        await TamaBot.load_cogs(bot)
     elif args.bot == "saki":
         bot = SakiBot()
-        await Cog.remove_cogs(bot)
-        await SakiBot.load_cogs(bot)
+    await Cog.remove_cogs(bot)
+    await Cog.load_cogs(bot)
     print(f"{args.bot.capitalize()} Online")
     await bot.client.start(bot.token)
 

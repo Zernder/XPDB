@@ -1,0 +1,62 @@
+[
+    {
+        "question": "What is the capital of Thailand?",
+        "answer": "Bangkok"
+    },
+    {
+        "question": "What is the largest country by land area?",
+        "answer": "Russia"
+    },
+    {
+        "question": "Who painted the Mona Lisa?",
+        "answer": "Leonardo da Vinci"
+    },
+    {
+        "question": "What is the chemical symbol for gold?",
+        "answer": "Au"
+    },
+    {
+        "question": "What is the longest river in the world?",
+        "answer": "Amazon River"
+    },
+    {
+        "question": "Which planet is known as the Red Planet?",
+        "answer": "Mars"
+    },
+    {
+        "question": "In which year did the Titanic sink?",
+        "answer": "1912"
+    },
+    {
+        "question": "What is the currency of Japan?",
+        "answer": "Yen"
+    },
+    {
+        "question": "Who discovered gravity?",
+        "answer": "Isaac Newton"
+    },
+    {
+        "question": "Which element has the atomic number 1?",
+        "answer": "Hydrogen"
+    },
+    {
+        "question": "What is the main ingredient in guacamole?",
+        "answer": "Avocado"
+    },
+    {
+        "question": "Who was the first president of the United States?",
+        "answer": "George Washington"
+    },
+    {
+        "question": "What is the tallest mountain in the world?",
+        "answer": "Mount Everest"
+    },
+    {
+        "question": "Which animal is known as the King of the Jungle?",
+        "answer": "Lion"
+    },
+    {
+        "question": "What is the name of the longest running television show?",
+        "answer": "The Simpsons"
+    }
+]
