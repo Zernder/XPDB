@@ -18,9 +18,6 @@ REM Install wheel and dependencies
 pip install wheel
 pip install -r piplist.txt
 
-REM Create directories
-mkdir Media\\Music\\
-
 REM Deactivate the virtual environment
 deactivate
 
@@ -42,9 +39,6 @@ source venv/bin/activate
 pip install wheel
 pip install -r piplist.txt
 
-# Create directories
-mkdir -p Media/Music/
-
 # Deactivate the virtual environment
 deactivate
 
@@ -63,13 +57,8 @@ REM Activate the virtual environment
 call venv\\Scripts\\activate
 
 REM Start TamaBot in a new command prompt window
-start cmd /k python main.py tama
+start cmd /k python main.py
 
-REM Wait for a moment before starting SakiBot
-timeout /t 5 /nobreak >nul
-
-REM Start SakiBot in a new command prompt window
-start cmd /k python main.py saki
 """
         with open("runbot.bat", "w") as bat_file:
             bat_file.write(script_content)
@@ -80,13 +69,8 @@ start cmd /k python main.py saki
 source venv/bin/activate
 
 # Start TamaBot
-python main.py tama &
+python3 main.py tama
 
-# Wait for a moment before starting SakiBot
-sleep 5
-
-# Start SakiBot
-python main.py saki
 """
         with open("runbot.sh", "w") as sh_file:
             sh_file.write(script_content)

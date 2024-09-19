@@ -76,9 +76,7 @@ async def SetActivity(self):
             await self.client.change_presence(status=discord.Status.online, activity=discord.Game(name=game))
             print("Status changed successfully")  # Debug print
             print("Activity loop started")
-            rand = random.randint((30 * 60),(60 * 60))
-            print("Waiting: " + str(int(rand / 60)) + " minutes")
-            await asyncio.sleep(rand)
+            await asyncio.sleep(43200)
                 
         except Exception as e:
             print(f"An error occurred in SetActivity: {e}")
@@ -141,6 +139,9 @@ class SakiBot(DiscordBotBase):
         super().__init__()
         # self.modelName = "Autumn"
         self.botNames = ["saki", "autumn"]
+
+    async def on_ready(self):
+        await super().on_ready()
 
 
 class Cog:
