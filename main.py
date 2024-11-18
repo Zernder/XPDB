@@ -136,7 +136,7 @@ class TamaBot(DiscordBotBase):
 
 class SakiBot(DiscordBotBase):
     def __init__(self):
-        super().__init__()
+        super().__init__(modelName="Autumn", commandPrefix=["saki"], intents=discord.Intents.all(), token=os.getenv("SakiToken"), chatChannel=os.getenv("ChatChannel"))
         # self.modelName = "Autumn"
         self.botNames = ["saki", "autumn"]
 
@@ -151,14 +151,17 @@ class Cog:
     async def load_cogs(self):
         if args.bot == "tama":
             await self.client.load_extension('Cogs.ModerationCog')
+            await self.client.load_extension('Cogs.MusicCog')
+
         elif args.bot == "saki":
             await self.client.load_extension('Cogs.ModerationCog')
-            await self.client.load_extension('Cogs.MusicCog')
+            await self.client.load_extension('Cogs.QuizCog')
+            
 
     async def remove_cogs(self):
         await self.client.remove_cog('Cogs.ModerationCog')
         await self.client.remove_cog('Cogs.MusicCog')
-
+        await self.client.remove_cog('Cogs.QuizCog')
 
 async def main():
     if args.bot == "tama":
