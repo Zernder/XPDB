@@ -11,7 +11,6 @@ from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio, PCMVolumeTransformer
 
-
 class Music(commands.Cog):
     def __init__(self, client):
         self.client = client
@@ -20,15 +19,12 @@ class Music(commands.Cog):
         self.repeat = False
         self.last_interaction = None
 
-
     @commands.Cog.listener()
     async def on_ready(self):
         await self.client.tree.sync()
 
-
     async def is_music_channel(interaction: discord.Interaction):
         return interaction.channel.name == 'music'
-
 
     @app_commands.check(is_music_channel)
     @app_commands.command(name="play", description="Play music based on a name or random from a folder")
@@ -65,7 +61,6 @@ class Music(commands.Cog):
             else:
                 await self.play_local_song(interaction, song_name, voice_client)
 
-
     async def play_next(self, interaction):
         if not self.music_queue and not self.repeat:
             await interaction.followup.send("The music queue is empty.")
@@ -95,7 +90,6 @@ class Music(commands.Cog):
             else:
                 print(f'Finished playing {self.current_audio_file}')
 
-
     @app_commands.check(is_music_channel)
     @app_commands.command(name="skip", description="Skip the current song")
     async def skip(self, interaction: discord.Interaction):
@@ -105,7 +99,6 @@ class Music(commands.Cog):
             await interaction.response.send_message("Skipping to the next song.")
         else:
             await interaction.response.send_message("I'm not playing any music.")
-
 
     @app_commands.check(is_music_channel)
     @app_commands.command(name="volume", description="Set the audio volume")
@@ -118,7 +111,6 @@ class Music(commands.Cog):
         else:
             await interaction.followup.send("No music is currently playing.")
 
-
     @app_commands.check(is_music_channel)
     @app_commands.command(name="pause", description="Pause the music")
     async def pause(self, interaction: discord.Interaction):
@@ -129,7 +121,6 @@ class Music(commands.Cog):
         else:
             await interaction.response.send_message("I'm not playing any music or music is already paused.")
 
-
     @app_commands.check(is_music_channel)
     @app_commands.command(name="resume", description="Resume the music")
     async def resume(self, interaction: discord.Interaction):
@@ -139,7 +130,6 @@ class Music(commands.Cog):
             await interaction.response.send_message("Music resumed.")
         else:
             await interaction.response.send_message("I'm not playing any music or music is not paused.")
-
 
     @app_commands.check(is_music_channel)
     @app_commands.command(name="stop", description="Stop the music and clear the queue")
@@ -153,7 +143,6 @@ class Music(commands.Cog):
         else:
             await interaction.response.send_message("I'm not playing any music.")
 
-
     @app_commands.check(is_music_channel)
     @app_commands.command(name="repeat", description="Toggle repeat for the current song")
     async def repeat(self, interaction: discord.Interaction):
@@ -164,7 +153,6 @@ class Music(commands.Cog):
         if self.current_audio_file:
             await self.play_next(interaction)
 
-
     @app_commands.check(is_music_channel)
     @app_commands.command(name="queue", description="Show the music queue")
     async def queue(self, interaction: discord.Interaction):
@@ -173,8 +161,6 @@ class Music(commands.Cog):
             return
         queue_text = "\n".join(f"{index + 1}. {song}" for index, song in enumerate(self.music_queue))
         await interaction.response.send_message(f"Music Queue:\n{queue_text}")
-
-
 
 async def setup(client):
     await client.add_cog(Music(client))

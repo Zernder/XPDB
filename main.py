@@ -9,11 +9,9 @@ import ollama
 import json
 
 load_dotenv()
-
 parser = argparse.ArgumentParser(description="Run TamaBot or SakiBot")
 parser.add_argument("bot", choices=["tama", "saki"], help="Specify the bot to run (tama or saki)", nargs="?", default="tama")
 args = parser.parse_args()
-
 
 def GenerateResponse(message, modelName):
     try:
@@ -27,7 +25,6 @@ def GenerateResponse(message, modelName):
     except Exception as e:
         print(f"An error occurred in GenerateResponse: {e}")
         return None
-
 
 def GenerateGameList():
     # Path to the bot folder
@@ -81,7 +78,6 @@ async def SetActivity(self):
         except Exception as e:
             print(f"An error occurred in SetActivity: {e}")
 
-
 class DiscordBotBase:
     def __init__(self, modelName, commandPrefix, intents, token, chatChannel):
         self.client = commands.Bot(command_prefix=commandPrefix, case_insensitive=True, intents=intents)
@@ -124,7 +120,6 @@ class DiscordBotBase:
                 if AIResponse:
                     await message.channel.send(AIResponse)
 
-
 class TamaBot(DiscordBotBase):
     def __init__(self):
         super().__init__(modelName="Tamaneko", commandPrefix=["tama"], intents=discord.Intents.all(), token=os.getenv("TamaToken"), chatChannel=os.getenv("ChatChannel"))
@@ -132,7 +127,6 @@ class TamaBot(DiscordBotBase):
 
     async def on_ready(self):
         await super().on_ready()
-
 
 class SakiBot(DiscordBotBase):
     def __init__(self):
@@ -142,7 +136,6 @@ class SakiBot(DiscordBotBase):
 
     async def on_ready(self):
         await super().on_ready()
-
 
 class Cog:
     def __init__(self, client):
@@ -172,7 +165,6 @@ async def main():
     await Cog.load_cogs(bot)
     print(f"{args.bot.capitalize()} Online")
     await bot.client.start(bot.token)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
