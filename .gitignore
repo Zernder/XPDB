@@ -5,3 +5,6 @@
 /venv
 updatebot.bat
 runbot.bat
+questions.json
+quiz_config.json
+points.json

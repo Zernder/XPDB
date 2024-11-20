@@ -165,4 +165,3 @@ class Music(commands.Cog):
 async def setup(client):
     await client.add_cog(Music(client))
     print("Music Online")
-

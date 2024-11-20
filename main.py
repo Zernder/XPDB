@@ -149,7 +149,6 @@ class Cog:
         elif args.bot == "saki":
             await self.client.load_extension('Cogs.ModerationCog')
             await self.client.load_extension('Cogs.QuizCog')
-            
 
     async def remove_cogs(self):
         await self.client.remove_cog('Cogs.ModerationCog')
