@@ -9,11 +9,74 @@ import ollama
 import json
 
 load_dotenv()
-
 parser = argparse.ArgumentParser(description="Run TamaBot or SakiBot")
 parser.add_argument("bot", choices=["tama", "saki"], help="Specify the bot to run (tama or saki)", nargs="?", default="tama")
 args = parser.parse_args()
 
+def GenerateResponse(message, modelName):
+    try:
+        response = ollama.chat(
+            model=modelName,
+            messages=[{'role': 'user', 'content': message.content}],
+            stream=False,
+        )
+        AIResponse = response['message']['content']
+        return AIResponse
+    except Exception as e:
+        print(f"An error occurred in GenerateResponse: {e}")
+        return None
+
+def GenerateGameList():
+    # Path to the bot folder
+    bot_directory = os.path.dirname(os.path.abspath(__file__))
+    game_list_file = os.path.join(bot_directory, "GameList.json")
+
+    games = []
+
+    # Read games from GameList.json in the bot folder
+    try:
+        with open(game_list_file, "r") as file:
+            gamelist = json.load(file)["games"]
+            games.extend(gamelist)
+        print(f"Loaded {len(gamelist)} games from GameList.json")
+    except FileNotFoundError:
+        print(f"GameList.json not found: {game_list_file}")
+    except json.JSONDecodeError as e:
+        print(f"Error parsing GameList.json: {e}")
+    except KeyError:
+        print("'games' key not found in GameList.json")
+
+    steam_directory = os.path.join(r"C:\\Program Files (x86)\\Steam\\steamapps\\common")
+    if os.path.isdir(steam_directory):
+        try:
+            steam_games = [name for name in os.listdir(steam_directory) if os.path.isdir(os.path.join(steam_directory, name))]
+            games.extend(steam_games)
+            print(f"Found {len(steam_games)} games in Steam directory")
+        except Exception as e:
+            print(f"Error accessing Steam directory {steam_directory}: {e}")
+
+    print(f"Total games found: {len(games)}")
+    return games
+
+async def SetActivity(self):
+    while True:
+        print("SetActivity function called")  # Debug print
+        try:
+            games = GenerateGameList()
+            print(f"Found {len(games)} games")  # Debug print
+            if not games:
+                print("No games found.")
+                return
+
+            game = random.choice(games)
+            print(f"Changing status to: {game}")  # Debug print
+            await self.client.change_presence(status=discord.Status.online, activity=discord.Game(name=game))
+            print("Status changed successfully")  # Debug print
+            print("Activity loop started")
+            await asyncio.sleep(43200)
+                
+        except Exception as e:
+            print(f"An error occurred in SetActivity: {e}")
 
 def GenerateResponse(message, modelName):
     try:
@@ -80,7 +143,6 @@ class DiscordBotBase:
         self.client.event(self.on_ready)
         self.client.event(self.on_message)
 
-
     async def on_ready(self):
         self.client.loop.create_task(SetActivity(self))
         channel = discord.utils.get(name=self.chatChannel)
@@ -112,6 +174,22 @@ class DiscordBotBase:
                 if AIResponse:
                     await message.channel.send(AIResponse)
 
+        if message.channel.name == self.chatChannel:
+            AIResponse = GenerateResponse(message, self.modelName)
+            if AIResponse:
+                await message.channel.send(AIResponse)
+        
+        elif "tama" in message.content.lower() or "saki" in message.content.lower():
+            AIResponse = GenerateResponse(message, self.modelName)
+            if AIResponse:
+                await message.channel.send(AIResponse)
+    
+        elif message.channel.name != self.chatChannel:
+            rand = random.randrange(0, 6)
+            if rand == 0:
+                AIResponse = GenerateResponse(message)
+                if AIResponse:
+                    await message.channel.send(AIResponse)
 
 class TamaBot(DiscordBotBase):
     def __init__(self):
@@ -121,7 +199,6 @@ class TamaBot(DiscordBotBase):
     async def on_ready(self):
         await super().on_ready()
 
-
 class SakiBot(DiscordBotBase):
     def __init__(self):
         super().__init__(modelName="Autumn", commandPrefix=["saki"], intents=discord.Intents.all(), token=os.getenv("SakiToken"), chatChannel=os.getenv("ChatChannel"))
@@ -130,7 +207,6 @@ class SakiBot(DiscordBotBase):
 
     async def on_ready(self):
         await super().on_ready()
-
 
 class Cog:
     def __init__(self, client):
@@ -165,7 +241,6 @@ async def main():
     await Cog.load_cogs(bot)
     print(f"{args.bot.capitalize()} Online")
     await bot.client.start(bot.token)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
