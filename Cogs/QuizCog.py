@@ -10,18 +10,38 @@ from typing import List, Dict
 import pytz
 
 def LoadJson(filename: str) -> dict:
+    """
+    Loads JSON data from a file. If the file doesn't exist or is invalid, it returns an empty dictionary.
+    """
     if not os.path.exists(filename):
+        print(f"Warning: {filename} does not exist. Returning an empty dictionary.")
         return {}
+
     try:
         with open(filename, 'r') as f:
             return json.load(f)
     except json.JSONDecodeError:
-        print(f"Error: {filename} is empty or invalid. Returning empty dictionary.")
+        print(f"Error: {filename} is empty or contains invalid JSON. Returning an empty dictionary.")
+        return {}
+    except Exception as e:
+        print(f"Unexpected error while loading {filename}: {e}")
         return {}
 
 def SaveJson(filename: str, data: dict) -> None:
-    with open(filename, 'w') as f:
-        json.dump(data, f, indent=4)
+    """
+    Saves a dictionary to a file in JSON format. Ensures the directory exists.
+    """
+    # Ensure the directory exists
+    folder = os.path.dirname(filename)
+    if folder and not os.path.exists(folder):
+        os.makedirs(folder)
+
+    try:
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        print(f"Error: Failed to save data to {filename}. Exception: {e}")
+
 
 class QuizView(discord.ui.View):
     def __init__(self, question: str, choices: List[str], correct_index: int, quiz_callback):
@@ -45,7 +65,7 @@ class QuizView(discord.ui.View):
 
     async def handle_response(self, interaction: discord.Interaction, chosen_index: int):
         if interaction.user.id in self.answered_users:
-            await interaction.response.send_message("You've already answered this question!", ephemeral=True)
+            await interaction.response.send_message("You've already answered this question!")
             return
 
         self.answered_users[interaction.user.id] = chosen_index
@@ -55,8 +75,9 @@ class QuizView(discord.ui.View):
 class Quiz(commands.Cog):
     def __init__(self, client):
         self.client = client
-        self.data: Dict = LoadJson("DataFiles/quiz-data.json")
+        self.data: Dict = LoadJson("quiz-data.json")
         self.questions: List[Dict] = LoadJson("DataFiles/questions.json")
+        self.quiz_started = False
 
         if not self.data:
             self.data = {
@@ -86,14 +107,11 @@ class Quiz(commands.Cog):
             quiz_time = datetime.strptime(quiz_time_str, "%H:%M")  # Parse to datetime object
 
             # Combine the current date with the scheduled quiz time (use current date but set the time part)
-            quiz_time_today = current_time.replace(hour=quiz_time.hour, minute=quiz_time.minute, second=0, microsecond=0)
-
-            # Define the 10-minute window (±5 minutes)
-            start_window = quiz_time_today - timedelta(minutes=5)
-            end_window = quiz_time_today + timedelta(minutes=5)
-
+            start_time = current_time.replace(hour=quiz_time.hour, minute=quiz_time.minute, second=0, microsecond=0)
+            
             # Check if the current time is within the quiz time window
-            if start_window <= current_time <= end_window:
+            if current_time >= start_time and self.quiz_started == False:
+                self.quiz_started = True
                 await self.start_quiz()
 
             # Check if it's time to reveal answers
@@ -103,6 +121,7 @@ class Quiz(commands.Cog):
 
             # If the current time is greater than or equal to the reveal time, and quiz answers are not revealed
             if current_time >= reveal_time_today and self.data["current_quiz"] and not self.data["current_quiz"].get("revealed", False):
+                self.quiz_started = False
                 await self.reveal_answers()
 
         except Exception as e:
@@ -115,18 +134,16 @@ class Quiz(commands.Cog):
 
         if not self.data.get("quiz_channel_id"):
             print("Error: Quiz channel not set.")
-            channel.send("Error: Quiz channel not set.", ephemeral=True, delete_after=5)
+            await channel.send("Error: Quiz channel not set.", ephemeral=True, delete_after=5)
             return
 
         channel = self.client.get_channel(self.data["quiz_channel_id"])
         if not channel:
             print(f"Error: Invalid channel ID: {self.data['quiz_channel_id']}")
             return
-
-
         try:
             question = random.choice(self.questions)  # Randomly select a question
-            channel.send(f"Selected question: {question['question']}", ephemeral=True, delete_after=10)
+            await channel.send(f"Selected question: {question['question']}")
 
             # Saving the selected question data to the quiz state
             self.data["current_quiz"] = {
@@ -136,7 +153,7 @@ class Quiz(commands.Cog):
                 "revealed": False,
                 "answers": {}
             }
-            SaveJson("DataFiles\quiz-data.json", self.data)  # Save updated quiz state
+            SaveJson("DataFiles/quiz-data.json", self.data)  # Save updated quiz state
 
         except IndexError:
             print("Error: No questions available.")  # This will be raised if self.questions is empty.
@@ -152,7 +169,7 @@ class Quiz(commands.Cog):
             "revealed": False,
             "answers": {}
         }
-        SaveJson("DataFiles\quiz-data.json", self.data)
+        SaveJson("DataFiles/quiz-data.json", self.data)
 
         print("Sending quiz to channel...")
         view = QuizView(
@@ -176,9 +193,9 @@ class Quiz(commands.Cog):
                 self.data["points"][user_id] = 0
             self.data["points"][user_id] += 1
         
-        SaveJson("DataFiles\quiz-data.json", self.data)
+        SaveJson("DataFiles/quiz-data.json", self.data)
         await interaction.response.send_message(
-            "✅ Correct!" if correct else f"❌ Wrong! The correct answer is: {correct_answer}", ephemeral=True, delete_after=True)
+            "✅ Correct!" if correct else f"❌ Wrong! The correct answer is: {correct_answer}", ephemeral=True, delete_after=60)
 
     async def reveal_answers(self):
         if not self.data["current_quiz"] or not self.data["quiz_channel_id"]:
@@ -200,28 +217,40 @@ class Quiz(commands.Cog):
         )
 
         self.data["current_quiz"]["revealed"] = True
-        SaveJson("DataFiles\quiz-data.json", self.data)
+        SaveJson("DataFiles/quiz-data.json", self.data)
         # Reset current quiz after reveal
         self.data["current_quiz"] = {}
-        SaveJson("DataFiles\quiz-data.json", self.data)
+        SaveJson("DataFiles/quiz-data.json", self.data)
 
     @app_commands.command(name="set_quiz_channel", description="Set the channel for daily quizzes")
     @commands.has_permissions(administrator=True)
     async def set_quiz_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         self.data["quiz_channel_id"] = channel.id
-        SaveJson("DataFiles\quiz-data.json", self.data)
+        SaveJson("DataFiles/quiz-data.json", self.data)
         await interaction.response.send_message(f"Quiz channel set to {channel.mention}", ephemeral=True, delete_after=5)
 
-    @app_commands.command(name="set_quiz_time", description="Set the daily quiz time (24-hour format, HH:MM)")
+    @app_commands.command(name="set_quiz_start_time", description="Set the daily quiz start time (24-hour format, HH:MM)")
     @commands.has_permissions(administrator=True)
-    async def set_quiz_time(self, interaction: discord.Interaction, time: str):
+    async def set_quiz_start_time(self, interaction: discord.Interaction, time: str):
         try:
             datetime.strptime(time, "%H:%M")
             self.data["quiz_time"] = time
-            SaveJson("DataFiles\quiz-data.json", self.data)
+            SaveJson("DataFiles/quiz-data.json", self.data)
             await interaction.response.send_message(f"Daily quiz time set to {time}", ephemeral=True, delete_after=5)
         except ValueError:
             await interaction.response.send_message("Invalid time format. Please use HH:MM (24-hour format)")
+
+    @app_commands.command(name="set_quiz_end_time", description="Set the daily quiz end time (24-hour format, HH:MM)")
+    @commands.has_permissions(administrator=True)
+    async def set_quiz_end_time(self, interaction: discord.Interaction, time: str):
+        try:
+            datetime.strptime(time, "%H:%M")
+            self.data["reveal_time"] = time
+            SaveJson("DataFiles/quiz-data.json", self.data)
+            await interaction.response.send_message(f"Daily quiz results reveal time set to {time}", ephemeral=True, delete_after=5)
+        except ValueError:
+            await interaction.response.send_message("Invalid time format. Please use HH:MM (24-hour format)")
+
 
     @app_commands.command(name="start_quiz", description="start the daily quiz")
     @commands.has_permissions(administrator=True)
@@ -254,7 +283,7 @@ class Quiz(commands.Cog):
                 "revealed": False,
                 "answers": {}
             }
-            SaveJson("DataFiles\quiz-data.json", self.data)  # Save updated quiz state
+            SaveJson("DataFiles/quiz-data.json", self.data)  # Save updated quiz state
 
         except IndexError:
             print("Error: No questions available.")  # This will be raised if self.questions is empty.

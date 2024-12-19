@@ -10,7 +10,7 @@ import json
 
 load_dotenv()
 parser = argparse.ArgumentParser(description="Run TamaBot or SakiBot")
-parser.add_argument("bot", choices=["tama", "saki"], help="Specify the bot to run (tama or saki)", nargs="?", default="tama")
+parser.add_argument("bot", choices=["tama", "saki"], help="Specify the bot to run (tama or saki)", nargs="?", default="saki")
 args = parser.parse_args()
 
 def GenerateResponse(message, modelName):
