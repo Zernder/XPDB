@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 import argparse
 import ollama
 import json
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 load_dotenv()
 
@@ -32,7 +31,7 @@ def GenerateResponse(message, modelName):
 def GenerateGameList():
     # Path to the bot folder
     bot_directory = os.path.dirname(os.path.abspath(__file__))
-    game_list_file = os.path.join(bot_directory, "GameList.json")
+    game_list_file = os.path.join(bot_directory, "DataFiles/GameList.json")
 
     games = []
 
@@ -80,8 +79,6 @@ class DiscordBotBase:
 
         self.client.event(self.on_ready)
         self.client.event(self.on_message)
-        self.scheduler = AsyncIOScheduler()
-        self.scheduler.start()
 
 
     async def on_ready(self):

@@ -55,8 +55,8 @@ class QuizView(discord.ui.View):
 class Quiz(commands.Cog):
     def __init__(self, client):
         self.client = client
-        self.data: Dict = LoadJson("QuizFiles/quiz-data.json")
-        self.questions: List[Dict] = LoadJson("QuizFiles/questions.json")
+        self.data: Dict = LoadJson("DataFiles/quiz-data.json")
+        self.questions: List[Dict] = LoadJson("DataFiles/questions.json")
 
         if not self.data:
             self.data = {
@@ -66,7 +66,7 @@ class Quiz(commands.Cog):
                 "reveal_time": "18:00",  # When to reveal answers (24-hour format)
                 "quiz_channel_id": None
             }
-            SaveJson("QuizFiles/quiz-data.json", self.data)
+            SaveJson("DataFiles/quiz-data.json", self.data)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -136,7 +136,7 @@ class Quiz(commands.Cog):
                 "revealed": False,
                 "answers": {}
             }
-            SaveJson("QuizFiles/quiz-data.json", self.data)  # Save updated quiz state
+            SaveJson("DataFiles\quiz-data.json", self.data)  # Save updated quiz state
 
         except IndexError:
             print("Error: No questions available.")  # This will be raised if self.questions is empty.
@@ -152,7 +152,7 @@ class Quiz(commands.Cog):
             "revealed": False,
             "answers": {}
         }
-        SaveJson("QuizFiles/quiz-data.json", self.data)
+        SaveJson("DataFiles\quiz-data.json", self.data)
 
         print("Sending quiz to channel...")
         view = QuizView(
@@ -176,7 +176,7 @@ class Quiz(commands.Cog):
                 self.data["points"][user_id] = 0
             self.data["points"][user_id] += 1
         
-        SaveJson("QuizFiles/quiz-data.json", self.data)
+        SaveJson("DataFiles\quiz-data.json", self.data)
         await interaction.response.send_message(
             "✅ Correct!" if correct else f"❌ Wrong! The correct answer is: {correct_answer}", ephemeral=True, delete_after=True)
 
@@ -200,16 +200,16 @@ class Quiz(commands.Cog):
         )
 
         self.data["current_quiz"]["revealed"] = True
-        SaveJson("QuizFiles/quiz-data.json", self.data)
+        SaveJson("DataFiles\quiz-data.json", self.data)
         # Reset current quiz after reveal
         self.data["current_quiz"] = {}
-        SaveJson("QuizFiles/quiz-data.json", self.data)
+        SaveJson("DataFiles\quiz-data.json", self.data)
 
     @app_commands.command(name="set_quiz_channel", description="Set the channel for daily quizzes")
     @commands.has_permissions(administrator=True)
     async def set_quiz_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         self.data["quiz_channel_id"] = channel.id
-        SaveJson("QuizFiles/quiz-data.json", self.data)
+        SaveJson("DataFiles\quiz-data.json", self.data)
         await interaction.response.send_message(f"Quiz channel set to {channel.mention}", ephemeral=True, delete_after=5)
 
     @app_commands.command(name="set_quiz_time", description="Set the daily quiz time (24-hour format, HH:MM)")
@@ -218,7 +218,7 @@ class Quiz(commands.Cog):
         try:
             datetime.strptime(time, "%H:%M")
             self.data["quiz_time"] = time
-            SaveJson("QuizFiles/quiz-data.json", self.data)
+            SaveJson("DataFiles\quiz-data.json", self.data)
             await interaction.response.send_message(f"Daily quiz time set to {time}", ephemeral=True, delete_after=5)
         except ValueError:
             await interaction.response.send_message("Invalid time format. Please use HH:MM (24-hour format)")
@@ -254,7 +254,7 @@ class Quiz(commands.Cog):
                 "revealed": False,
                 "answers": {}
             }
-            SaveJson("QuizFiles/quiz-data.json", self.data)  # Save updated quiz state
+            SaveJson("DataFiles\quiz-data.json", self.data)  # Save updated quiz state
 
         except IndexError:
             print("Error: No questions available.")  # This will be raised if self.questions is empty.
@@ -270,7 +270,7 @@ class Quiz(commands.Cog):
             "revealed": False,
             "answers": {}
         }
-        SaveJson("QuizFiles/quiz-data.json", self.data)
+        SaveJson("DataFiles/quiz-data.json", self.data)
 
         await interaction.response.send_message(f"Sending quiz to channel...", ephemeral=True, delete_after=20)
         print("Sending quiz to channel...")

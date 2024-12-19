@@ -1,0 +1,20 @@
+{
+    "current_quiz": {
+        "question": "What is the largest desert in the world?",
+        "choices": [
+            "Gobi Desert",
+            "Sahara Desert",
+            "Antarctic Desert",
+            "Kalahari Desert"
+        ],
+        "correct_index": 2,
+        "revealed": false,
+        "answers": {}
+    },
+    "points": {
+        "175421668850794506": 3
+    },
+    "quiz_time": "06:00",
+    "reveal_time": "18:00",
+    "quiz_channel_id": 1308181674785247313
+}
