@@ -1,206 +1,288 @@
 import discord
-from discord.ext import commands, tasks
-import random
 import asyncio
-import json
 from discord import app_commands
+from discord.ext import commands, tasks
+from datetime import datetime, timedelta
+import json
+import os
+import random
+from typing import List, Dict
+import pytz
+
+def LoadJson(filename: str) -> dict:
+    if not os.path.exists(filename):
+        return {}
+    try:
+        with open(filename, 'r') as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        print(f"Error: {filename} is empty or invalid. Returning empty dictionary.")
+        return {}
+
+def SaveJson(filename: str, data: dict) -> None:
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=4)
+
+class QuizView(discord.ui.View):
+    def __init__(self, question: str, choices: List[str], correct_index: int, quiz_callback):
+        super().__init__(timeout=None)  # No timeout for quiz buttons
+        self.question = question
+        self.choices = choices
+        self.correct_index = correct_index
+        self.quiz_callback = quiz_callback
+        self.answered_users = {}
+        
+        for i, choice in enumerate(choices):
+            button = discord.ui.Button(label=choice, style=discord.ButtonStyle.primary, custom_id=f"choice_{i}")
+            # Now, the callback is correctly tied to the value of 'i' by passing 'i' explicitly to the handler
+            button.callback = self.create_response_callback(i)
+            self.add_item(button)
+
+    def create_response_callback(self, idx: int):
+        async def response_callback(interaction: discord.Interaction):
+            await self.handle_response(interaction, idx)
+        return response_callback
+
+    async def handle_response(self, interaction: discord.Interaction, chosen_index: int):
+        if interaction.user.id in self.answered_users:
+            await interaction.response.send_message("You've already answered this question!", ephemeral=True)
+            return
+
+        self.answered_users[interaction.user.id] = chosen_index
+        correct = chosen_index == self.correct_index
+        await self.quiz_callback(interaction, correct, self.choices[self.correct_index])
 
 class Quiz(commands.Cog):
     def __init__(self, client):
         self.client = client
-        self.quiz_channel = None  # You can set a specific channel later
-        self.pending_submissions = []  # Temporary list for storing submitted questions
-        self.admin_ids = [175421668850794506, 435239674886488075]  # Replace with your actual admin user IDs
-        self.load_questions()
-        self.load_points()  # Load user points
-        self.quiz_task.start()
+        self.data: Dict = LoadJson("QuizFiles/quiz-data.json")
+        self.questions: List[Dict] = LoadJson("QuizFiles/questions.json")
 
-    # Load questions from the JSON file when the bot starts
-    def load_questions(self):
-        try:
-            with open('questions.json', 'r') as f:
-                self.questions = json.load(f)
-        except FileNotFoundError:
-            self.questions = []  # If no file exists, start with an empty list
+        if not self.data:
+            self.data = {
+                "current_quiz": {},
+                "points": {},
+                "quiz_time": "06:00",  # When to run the quiz (24-hour format)
+                "reveal_time": "18:00",  # When to reveal answers (24-hour format)
+                "quiz_channel_id": None
+            }
+            SaveJson("QuizFiles/quiz-data.json", self.data)
 
-    # Save questions to the JSON file
-    def save_questions(self):
-        with open('questions.json', 'w') as f:
-            json.dump(self.questions, f, indent=4)
-
-    # Load user points from the points file
-    def load_points(self):
-        try:
-            with open('points.json', 'r') as f:
-                self.points = json.load(f)
-        except FileNotFoundError:
-            self.points = {}  # If no file exists, start with an empty dictionary
-
-    # Save user points to the points file
-    def save_points(self):
-        with open('points.json', 'w') as f:
-            json.dump(self.points, f, indent=4)
-
-    # This method will send the Quiz of the Day in a specific channel at a fixed time
-    @tasks.loop(hours=24)  # Adjust timing as per your need
-    async def quiz_task(self):
-        if self.quiz_channel is None:
-            self.quiz_channel = self.client.get_channel(1308181674785247313)  # Replace with your channel ID
-        
-        # Check if there are any questions left to ask
-        if not self.questions:
-            await self.quiz_channel.send("No more questions left for the day.")
-            return
-
-        # Select a random question
-        question = random.choice(self.questions)
-        question_text = question["question"]
-        correct_answer = question["answer"]
-
-        # Send the question to the channel
-        message = await self.quiz_channel.send(f"**Quiz of the Day!**\n\n{question_text}\n\nReply with your answer!")
-
-        def check(msg):
-            return msg.channel == self.quiz_channel and msg.author != self.client.user
-
-        try:
-            # Wait for a user to reply with the answer
-            response = await self.client.wait_for('message', check=check, timeout=7200.0)  # Timeout after 2 hours
-            user_answer = response.content.lower()
-
-            if user_answer == correct_answer:
-                await message.edit(content=f"**Quiz of the Day!**\n\n{question_text}\n\n**Correct!** {response.author.mention} got it right!")
-                self.add_points(response.author.id, 1)  # Add points for correct answer
-            else:
-                await message.edit(content=f"**Quiz of the Day!**\n\n{question_text}\n\n**Incorrect!**. {response.author.mention} got it wrong!")
-
-            # Show current points after answer
-            current_points = self.points.get(response.author.id, 0)
-            await response.author.send(f"Your current points: {current_points}")
-
-            # Move the question to used_questions and remove it from available questions
-            self.questions.remove(question)
-            self.save_questions()  # Save the updated questions list
-            self.save_points()  # Save updated points
-
-        except asyncio.TimeoutError:
-            await message.edit(content=f"**Quiz of the Day!**\n\n{question_text}\n\n**Time's up!** No one answered in time.")
-
-    # Function to add points to a user
-    def add_points(self, user_id, points):
-        if user_id in self.points:
-            self.points[user_id] += points
-        else:
-            self.points[user_id] = points
-
-    # Start the quiz task when the bot is ready
     @commands.Cog.listener()
     async def on_ready(self):
-        self.quiz_task.start()
+        await self.client.tree.sync()
+        print("Quiz System Online")
+        self.check_quiz_time.start()
+ 
+    @tasks.loop(minutes=1)
+    async def check_quiz_time(self):
+        try:
+            # Get the current time in Arizona time (MST)
+            arizona_tz = pytz.timezone("US/Arizona")
+            current_time = datetime.now(arizona_tz)
 
-    @app_commands.command(name="setquizchannel", description="Set the channel for the daily quiz.")
-    async def set_quiz_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        self.quiz_channel = channel
-        await interaction.response.send_message(f"Quiz channel has been set to {channel.mention}.")
+            # Parse the scheduled quiz time
+            quiz_time_str = self.data.get("quiz_time", "00:00")
+            quiz_time = datetime.strptime(quiz_time_str, "%H:%M")  # Parse to datetime object
 
-    @app_commands.command(name="quiz", description="Start a quiz manually.")
-    async def start_quiz(self, interaction: discord.Interaction):
-        # Check if there are any questions left to ask
+            # Combine the current date with the scheduled quiz time (use current date but set the time part)
+            quiz_time_today = current_time.replace(hour=quiz_time.hour, minute=quiz_time.minute, second=0, microsecond=0)
+
+            # Define the 10-minute window (±5 minutes)
+            start_window = quiz_time_today - timedelta(minutes=5)
+            end_window = quiz_time_today + timedelta(minutes=5)
+
+            # Check if the current time is within the quiz time window
+            if start_window <= current_time <= end_window:
+                await self.start_quiz()
+
+            # Check if it's time to reveal answers
+            reveal_time_str = self.data.get("reveal_time", "18:00")
+            reveal_time = datetime.strptime(reveal_time_str, "%H:%M")  # Parse to datetime object
+            reveal_time_today = current_time.replace(hour=reveal_time.hour, minute=reveal_time.minute, second=0, microsecond=0)
+
+            # If the current time is greater than or equal to the reveal time, and quiz answers are not revealed
+            if current_time >= reveal_time_today and self.data["current_quiz"] and not self.data["current_quiz"].get("revealed", False):
+                await self.reveal_answers()
+
+        except Exception as e:
+            print(f"Error in check_quiz_time: {e}")
+
+    async def start_quiz(self):
         if not self.questions:
-            await interaction.response.send_message("No more questions left to ask.")
+            print("Error: No questions available.")
             return
 
-        # Select a random question
-        question = random.choice(self.questions)
-        question_text = question["question"]
-        correct_answer = question["answer"]
+        if not self.data.get("quiz_channel_id"):
+            print("Error: Quiz channel not set.")
+            channel.send("Error: Quiz channel not set.", ephemeral=True, delete_after=5)
+            return
 
-        # Send the question to the channel where the command is invoked
-        message = await interaction.response.send_message(f"**Quiz of the Day!**\n\n{question_text}\n\nReply with your answer!")
+        channel = self.client.get_channel(self.data["quiz_channel_id"])
+        if not channel:
+            print(f"Error: Invalid channel ID: {self.data['quiz_channel_id']}")
+            return
 
-        def check(msg):
-            return msg.channel == interaction.channel and msg.author != self.client.user
 
         try:
-            # Wait for a user to reply with the answer
-            response = await self.client.wait_for('message', check=check, timeout=30.0)  # Timeout after 30 seconds
-            user_answer = response.content.lower()
+            question = random.choice(self.questions)  # Randomly select a question
+            channel.send(f"Selected question: {question['question']}", ephemeral=True, delete_after=10)
 
-            if user_answer == correct_answer:
-                await message.edit(content=f"**Quiz of the Day!**\n\n{question_text}\n\n**Correct!** {response.author.mention} got it right!")
-                self.add_points(response.author.id, 1)  # Add points for correct answer
-            else:
-                await message.edit(content=f"**Quiz of the Day!**\n\n{question_text}\n\n**Incorrect!** The correct answer was: {correct_answer}. {response.author.mention} got it wrong!")
+            # Saving the selected question data to the quiz state
+            self.data["current_quiz"] = {
+                "question": question["question"],
+                "choices": question["choices"],
+                "correct_index": question["correct_index"],
+                "revealed": False,
+                "answers": {}
+            }
+            SaveJson("QuizFiles/quiz-data.json", self.data)  # Save updated quiz state
 
-            # Show current points after answer
-            current_points = self.points.get(response.author.id, 0)
-            await response.author.send(f"Your current points: {current_points}")
+        except IndexError:
+            print("Error: No questions available.")  # This will be raised if self.questions is empty.
+        except Exception as e:
+            print(f"Unexpected error occurred: {e}")  # Catch any other exceptions
+            import traceback
+            traceback.print_exc()  # This will print the full stack trace
 
-            # Move the question to used_questions and remove it from available questions
-            self.questions.remove(question)
-            self.save_questions()  # Save the updated questions list
-            self.save_points()  # Save updated points
+        self.data["current_quiz"] = {
+            "question": question["question"],
+            "choices": question["choices"],
+            "correct_index": question["correct_index"],
+            "revealed": False,
+            "answers": {}
+        }
+        SaveJson("QuizFiles/quiz-data.json", self.data)
 
-        except asyncio.TimeoutError:
-            await message.edit(content=f"**Quiz of the Day!**\n\n{question_text}\n\n**Time's up!** No one answered in time.")
+        print("Sending quiz to channel...")
+        view = QuizView(
+            question["question"],
+            question["choices"],
+            question["correct_index"],
+            self.handle_quiz_callback
+        )
+        await channel.send("🎯 **Daily Quiz Time!**\n" + question["question"], view=view)
 
-    # Command for users to submit questions and answers
-    @app_commands.command(name="submitquestion", description="Submit a new quiz question and answer for review.")
-    async def submit_question(self, interaction: discord.Interaction, question: str, answer: str):
-        # Add the submitted question to the pending list for review
-        self.pending_submissions.append({"question": question, "answer": answer, "author": interaction.user})
-        await interaction.response.send_message(f"Your question has been submitted for review! Thank you, {interaction.user.mention}.")
-
-    # Command for reviewing submitted questions (only for admins)
-    @app_commands.command(name="reviewsubmissions", description="Review all submitted questions.")
-    async def review_submissions(self, interaction: discord.Interaction):
-        # Check if the user is in the admin list
-        if interaction.user.id not in self.admin_ids:
-            await interaction.response.send_message("You do not have permission to review submissions.")
-            return
+    async def handle_quiz_callback(self, interaction: discord.Interaction, correct: bool, correct_answer: str):
+        user_id = str(interaction.user.id)
         
-        if not self.pending_submissions:
-            await interaction.response.send_message("No questions pending for review.")
+        self.data["current_quiz"]["answers"][user_id] = {
+            "correct": correct,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if correct:
+            if user_id not in self.data["points"]:
+                self.data["points"][user_id] = 0
+            self.data["points"][user_id] += 1
+        
+        SaveJson("QuizFiles/quiz-data.json", self.data)
+        await interaction.response.send_message(
+            "✅ Correct!" if correct else f"❌ Wrong! The correct answer is: {correct_answer}", ephemeral=True, delete_after=True)
+
+    async def reveal_answers(self):
+        if not self.data["current_quiz"] or not self.data["quiz_channel_id"]:
             return
 
-        review_message = "**Pending Quiz Question Submissions:**\n\n"
-        for idx, submission in enumerate(self.pending_submissions):
-            review_message += f"**{idx+1}.** Question: {submission['question']}\nAnswer: {submission['answer']}\nSubmitted by: {submission['author']}\n\n"
-
-        # Provide a way to approve or reject questions (you can implement reactions for approval/rejection)
-        await interaction.response.send_message(review_message)
-
-    # Command for admins to approve a question and add it to the quiz pool
-    @app_commands.command(name="approvequestion", description="Approve a submitted question and add it to the quiz pool.")
-    async def approve_question(self, interaction: discord.Interaction, question_number: int):
-        if interaction.user.id not in self.admin_ids:
-            await interaction.response.send_message("You do not have permission to approve questions.")
+        channel = self.client.get_channel(self.data["quiz_channel_id"])
+        if not channel:
             return
 
-        # Check if the question number is valid
-        if question_number < 1 or question_number > len(self.pending_submissions):
-            await interaction.response.send_message("Invalid question number.")
+        correct_answer = self.data["current_quiz"]["choices"][self.data["current_quiz"]["correct_index"]]
+        correct_users = [user_id for user_id, data in self.data["current_quiz"]["answers"].items() if data["correct"]]
+
+        await channel.send(
+            f"📊 **Quiz Results**\n"
+            f"Question: {self.data['current_quiz']['question']}\n"
+            f"Correct Answer: {correct_answer}\n"
+            f"Number of correct answers: {len(correct_users)}\n"
+            "\nCongratulations to everyone who got it right! 🎉"
+        )
+
+        self.data["current_quiz"]["revealed"] = True
+        SaveJson("QuizFiles/quiz-data.json", self.data)
+        # Reset current quiz after reveal
+        self.data["current_quiz"] = {}
+        SaveJson("QuizFiles/quiz-data.json", self.data)
+
+    @app_commands.command(name="set_quiz_channel", description="Set the channel for daily quizzes")
+    @commands.has_permissions(administrator=True)
+    async def set_quiz_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
+        self.data["quiz_channel_id"] = channel.id
+        SaveJson("QuizFiles/quiz-data.json", self.data)
+        await interaction.response.send_message(f"Quiz channel set to {channel.mention}", ephemeral=True, delete_after=5)
+
+    @app_commands.command(name="set_quiz_time", description="Set the daily quiz time (24-hour format, HH:MM)")
+    @commands.has_permissions(administrator=True)
+    async def set_quiz_time(self, interaction: discord.Interaction, time: str):
+        try:
+            datetime.strptime(time, "%H:%M")
+            self.data["quiz_time"] = time
+            SaveJson("QuizFiles/quiz-data.json", self.data)
+            await interaction.response.send_message(f"Daily quiz time set to {time}", ephemeral=True, delete_after=5)
+        except ValueError:
+            await interaction.response.send_message("Invalid time format. Please use HH:MM (24-hour format)")
+
+    @app_commands.command(name="start_quiz", description="start the daily quiz")
+    @commands.has_permissions(administrator=True)
+    async def start_quiz_command(self, interaction: discord.Interaction):
+        if not self.questions:
+            print("Error: No questions available.")
             return
 
-        question_to_add = self.pending_submissions.pop(question_number - 1)
-        self.questions.append(question_to_add)
-        self.save_questions()  # Save the updated questions list
-        await interaction.response.send_message(f"Question '{question_to_add['question']}' has been approved and added to the quiz pool.")
-
-    # Command for admins to reject a question
-    @app_commands.command(name="rejectquestion", description="Reject a submitted question.")
-    async def reject_question(self, interaction: discord.Interaction, question_number: int):
-        if interaction.user.id not in self.admin_ids:
-            await interaction.response.send_message("You do not have permission to reject questions.")
+        if not self.data.get("quiz_channel_id"):
+            print("Error: Quiz channel not set.")
             return
 
-        # Check if the question number is valid
-        if question_number < 1 or question_number > len(self.pending_submissions):
-            await interaction.response.send_message("Invalid question number.")
+        channel = self.client.get_channel(self.data["quiz_channel_id"])
+        if not channel:
+            print(f"Error: Invalid channel ID: {self.data['quiz_channel_id']}")
             return
 
-        rejected_question = self.pending_submissions.pop(question_number - 1)
-        await interaction.response.send_message(f"Question '{rejected_question['question']}' has been rejected.")
+        print(f"Quiz channel found: {channel.name}")
+
+        try:
+            question = random.choice(self.questions)  # Randomly select a question
+            print(f"Selected question: {question['question']}")
+            print(f"Choices: {question['choices']}")
+
+            # Saving the selected question data to the quiz state
+            self.data["current_quiz"] = {
+                "question": question["question"],
+                "choices": question["choices"],
+                "correct_index": question["correct_index"],
+                "revealed": False,
+                "answers": {}
+            }
+            SaveJson("QuizFiles/quiz-data.json", self.data)  # Save updated quiz state
+
+        except IndexError:
+            print("Error: No questions available.")  # This will be raised if self.questions is empty.
+        except Exception as e:
+            print(f"Unexpected error occurred: {e}")  # Catch any other exceptions
+            import traceback
+            traceback.print_exc()  # This will print the full stack trace
+
+        self.data["current_quiz"] = {
+            "question": question["question"],
+            "choices": question["choices"],
+            "correct_index": question["correct_index"],
+            "revealed": False,
+            "answers": {}
+        }
+        SaveJson("QuizFiles/quiz-data.json", self.data)
+
+        await interaction.response.send_message(f"Sending quiz to channel...", ephemeral=True, delete_after=20)
+        print("Sending quiz to channel...")
+        view = QuizView(
+            question["question"],
+            question["choices"],
+            question["correct_index"],
+            self.handle_quiz_callback
+        )
+        await channel.send("🎯 **Daily Quiz Time!**\n" + question["question"], view=view)
+
 
 async def setup(client):
     await client.add_cog(Quiz(client))
+    print("Quiz System Online")

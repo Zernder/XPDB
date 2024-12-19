@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import argparse
 import ollama
 import json
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 load_dotenv()
 
@@ -28,7 +29,6 @@ def GenerateResponse(message, modelName):
         print(f"An error occurred in GenerateResponse: {e}")
         return None
 
-
 def GenerateGameList():
     # Path to the bot folder
     bot_directory = os.path.dirname(os.path.abspath(__file__))
@@ -41,7 +41,6 @@ def GenerateGameList():
         with open(game_list_file, "r") as file:
             gamelist = json.load(file)["games"]
             games.extend(gamelist)
-        print(f"Loaded {len(gamelist)} games from GameList.json")
     except FileNotFoundError:
         print(f"GameList.json not found: {game_list_file}")
     except json.JSONDecodeError as e:
@@ -54,33 +53,22 @@ def GenerateGameList():
         try:
             steam_games = [name for name in os.listdir(steam_directory) if os.path.isdir(os.path.join(steam_directory, name))]
             games.extend(steam_games)
-            print(f"Found {len(steam_games)} games in Steam directory")
         except Exception as e:
             print(f"Error accessing Steam directory {steam_directory}: {e}")
 
-    print(f"Total games found: {len(games)}")
     return games
 
 async def SetActivity(self):
     while True:
-        print("SetActivity function called")  # Debug print
-        try:
-            games = GenerateGameList()
-            print(f"Found {len(games)} games")  # Debug print
-            if not games:
-                print("No games found.")
-                return
+        games = GenerateGameList()
+        if not games:
+            print("No games found.")
+            return
 
-            game = random.choice(games)
-            print(f"Changing status to: {game}")  # Debug print
-            await self.client.change_presence(status=discord.Status.online, activity=discord.Game(name=game))
-            print("Status changed successfully")  # Debug print
-            print("Activity loop started")
-            await asyncio.sleep(43200)
-                
-        except Exception as e:
-            print(f"An error occurred in SetActivity: {e}")
-
+        game = random.choice(games)
+        await self.client.change_presence(status=discord.Status.online, activity=discord.Game(name=game))
+        print("Activity loop started")
+        await asyncio.sleep(43200)
 
 class DiscordBotBase:
     def __init__(self, modelName, commandPrefix, intents, token, chatChannel):
@@ -92,6 +80,9 @@ class DiscordBotBase:
 
         self.client.event(self.on_ready)
         self.client.event(self.on_message)
+        self.scheduler = AsyncIOScheduler()
+        self.scheduler.start()
+
 
     async def on_ready(self):
         self.client.loop.create_task(SetActivity(self))
@@ -162,6 +153,11 @@ class Cog:
         await self.client.remove_cog('Cogs.ModerationCog')
         await self.client.remove_cog('Cogs.MusicCog')
         await self.client.remove_cog('Cogs.QuizCog')
+
+    async def reloadcogs(self):
+        await self.client.reload_extension('Cogs.ModerationCog')
+        await self.client.reload_extension('Cogs.MusicCog')
+        await self.client.reload_extension('Cogs.QuizCog')
 
 async def main():
     if args.bot == "tama":

@@ -30,6 +30,7 @@ class Moderation(commands.Cog):
     @commands.has_permissions(manage_messages=True)
     async def purge(self, interaction: discord.Interaction, count: int):
         try:
+            await interaction.response.send_message(f"Purging {count} messages...", ephemeral=True)
             await interaction.response.defer(ephemeral=True)
             await interaction.channel.purge(limit=count)
             await interaction.followup.send(f"Deleted {count} messages.")
@@ -38,6 +39,16 @@ class Moderation(commands.Cog):
         except Exception as e:
             await interaction.send(f"Purge failed: {e}")
 
+    @app_commands.command(name="reload_cogs", description="Reloads the Cogs")
+    async def reloadcogs(self, interaction: discord.Interaction):
+        try:
+            await interaction.client.reload_extension('Cogs.ModerationCog')
+            await interaction.client.reload_extension('Cogs.MusicCog')
+            await interaction.client.reload_extension('Cogs.QuizCog')
+            print("Cogs Reloaded")
+
+        except:
+            print("Error Reloading Cogs")
 
     @app_commands.check(is_allowed_user)
     @app_commands.command(name="kick", description="Kick Member")
@@ -70,9 +81,6 @@ class Moderation(commands.Cog):
         await interaction.send_message(f"{member.mention} has been unbanned from the server {interaction.author.mention}.")
         await interaction.user.unban(discord.Member)
         await interaction.send_message(f"{interaction.member.mention} has been unbanned from the server {interaction.author.mention}.")
-
-
-
 
 async def setup(client):
     await client.add_cog(Moderation(client))

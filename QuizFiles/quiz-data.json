@@ -1,0 +1,25 @@
+{
+    "current_quiz": {
+        "question": "In 'Persona 5,' what is the name of the protagonist's Persona?",
+        "choices": [
+            "Ars\u00e8ne",
+            "Skeeter",
+            "Ishtar",
+            "Oberon"
+        ],
+        "correct_index": 0,
+        "revealed": false,
+        "answers": {
+            "175421668850794506": {
+                "correct": true,
+                "timestamp": "2024-12-19T08:40:00.525228"
+            }
+        }
+    },
+    "points": {
+        "175421668850794506": 2
+    },
+    "quiz_time": "06:00",
+    "reveal_time": "18:00",
+    "quiz_channel_id": 1308181674785247313
+}

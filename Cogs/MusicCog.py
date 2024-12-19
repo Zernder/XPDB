@@ -4,9 +4,6 @@ import asyncio
 import discord
 from discord import app_commands, FFmpegPCMAudio, PCMVolumeTransformer
 from discord.ext import commands
-import yt_dlp
-import json
-from concurrent.futures import ThreadPoolExecutor
 from discord.ext import commands
 from discord.utils import get
 from discord import FFmpegPCMAudio, PCMVolumeTransformer
@@ -28,7 +25,6 @@ class Music(commands.Cog):
 
     async def is_music_channel(interaction: discord.Interaction):
         return interaction.channel.name == 'music'
-
 
     @app_commands.check(is_music_channel)
     @app_commands.command(name="play", description="Play music based on a name or random from a folder")
@@ -173,8 +169,6 @@ class Music(commands.Cog):
             return
         queue_text = "\n".join(f"{index + 1}. {song}" for index, song in enumerate(self.music_queue))
         await interaction.response.send_message(f"Music Queue:\n{queue_text}")
-
-
 
 async def setup(client):
     await client.add_cog(Music(client))
