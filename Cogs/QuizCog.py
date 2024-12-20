@@ -65,7 +65,7 @@ class QuizView(discord.ui.View):
 
     async def handle_response(self, interaction: discord.Interaction, chosen_index: int):
         if interaction.user.id in self.answered_users:
-            await interaction.response.send_message("You've already answered this question!")
+            await interaction.response.send_message("You have already answered this question!", ephemeral=True, delete_after=5)
             return
 
         self.answered_users[interaction.user.id] = chosen_index
@@ -77,7 +77,8 @@ class Quiz(commands.Cog):
         self.client = client
         self.data: Dict = LoadJson("quiz-data.json")
         self.questions: List[Dict] = LoadJson("DataFiles/questions.json")
-        self.quiz_started = False
+        # self.quiz_started = False
+        # self.quiz_ended = False
 
         if not self.data:
             self.data = {
@@ -85,6 +86,8 @@ class Quiz(commands.Cog):
                 "points": {},
                 "quiz_time": "06:00",  # When to run the quiz (24-hour format)
                 "reveal_time": "18:00",  # When to reveal answers (24-hour format)
+                "quiz_started": False,
+                "quiz_ended": False,
                 "quiz_channel_id": None
             }
             SaveJson("DataFiles/quiz-data.json", self.data)
@@ -110,8 +113,8 @@ class Quiz(commands.Cog):
             start_time = current_time.replace(hour=quiz_time.hour, minute=quiz_time.minute, second=0, microsecond=0)
             
             # Check if the current time is within the quiz time window
-            if current_time >= start_time and self.quiz_started == False:
-                self.quiz_started = True
+            if current_time >= start_time and self.data["quiz_started"] == False and self.data["quiz_ended"] == False:
+                self.data["quiz_started"] = True
                 await self.start_quiz()
 
             # Check if it's time to reveal answers
@@ -120,8 +123,9 @@ class Quiz(commands.Cog):
             reveal_time_today = current_time.replace(hour=reveal_time.hour, minute=reveal_time.minute, second=0, microsecond=0)
 
             # If the current time is greater than or equal to the reveal time, and quiz answers are not revealed
-            if current_time >= reveal_time_today and self.data["current_quiz"] and not self.data["current_quiz"].get("revealed", False):
-                self.quiz_started = False
+            if current_time >= reveal_time_today and self.data["quiz_ended"] == False:
+                self.data["quiz_ended"] = True
+                self.data["quiz_started"] = False
                 await self.reveal_answers()
 
         except Exception as e:

@@ -24,9 +24,9 @@ class Moderation(commands.Cog):
     @commands.has_permissions(manage_messages=True)
     async def purge(self, interaction: discord.Interaction, count: int):
         try:
-            await interaction.response.send_message(f"Purging {count} messages...", ephemeral=True)
             await interaction.response.defer(ephemeral=True)
             await interaction.channel.purge(limit=count)
+            await interaction.response.send_message(f"Purging {count} messages...", ephemeral=True)
             await interaction.followup.send(f"Deleted {count} messages.")
         except Forbidden:
             await interaction.send("Missing permissions")
