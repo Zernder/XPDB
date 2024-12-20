@@ -6,3 +6,4 @@
 updatebot.bat
 runbot.bat
 /.venv
+DataFiles/quiz-data.json

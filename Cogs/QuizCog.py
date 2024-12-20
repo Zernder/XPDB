@@ -75,10 +75,8 @@ class QuizView(discord.ui.View):
 class Quiz(commands.Cog):
     def __init__(self, client):
         self.client = client
-        self.data: Dict = LoadJson("quiz-data.json")
+        self.data: Dict = LoadJson("DataFiles/quiz-data.json")
         self.questions: List[Dict] = LoadJson("DataFiles/questions.json")
-        # self.quiz_started = False
-        # self.quiz_ended = False
 
         if not self.data:
             self.data = {
@@ -86,9 +84,9 @@ class Quiz(commands.Cog):
                 "points": {},
                 "quiz_time": "06:00",  # When to run the quiz (24-hour format)
                 "reveal_time": "18:00",  # When to reveal answers (24-hour format)
+                "quiz_channel_id": None,
                 "quiz_started": False,
-                "quiz_ended": False,
-                "quiz_channel_id": None
+                "quiz_finished_today": False,
             }
             SaveJson("DataFiles/quiz-data.json", self.data)
 
@@ -105,27 +103,33 @@ class Quiz(commands.Cog):
             arizona_tz = pytz.timezone("US/Arizona")
             current_time = datetime.now(arizona_tz)
 
-            # Parse the scheduled quiz time
-            quiz_time_str = self.data.get("quiz_time", "00:00")
-            quiz_time = datetime.strptime(quiz_time_str, "%H:%M")  # Parse to datetime object
+            # Set quiz start time to 6:00 AM
+            quiz_time_str = self.data["quiz_time"]
+            quiz_time = datetime.strptime(quiz_time_str, "%H:%M")
+            start_time_today = current_time.replace(hour=quiz_time.hour, minute=quiz_time.minute, second=0, microsecond=0)
 
-            # Combine the current date with the scheduled quiz time (use current date but set the time part)
-            start_time = current_time.replace(hour=quiz_time.hour, minute=quiz_time.minute, second=0, microsecond=0)
-            
-            # Check if the current time is within the quiz time window
-            if current_time >= start_time and self.data["quiz_started"] == False and self.data["quiz_ended"] == False:
+            # Set quiz reveal time to 6:00 PM
+            reveal_time_str = self.data["reveal_time"]
+            reveal_time = datetime.strptime(reveal_time_str, "%H:%M")
+            reveal_time_today = current_time.replace(hour=reveal_time.hour, minute=reveal_time.minute, second=0, microsecond=0)
+
+            # Reset quiz_finished_today flag at the start of the new day (midnight)
+            if current_time.hour == 0 and current_time.minute == 0:
+                self.data["quiz_finished_today"] = False
+
+            # Skip the logic if the quiz is finished today
+            if self.data.get("quiz_finished_today", True):
+                return
+
+            # Check if it's time to start the quiz (6 AM)
+            if current_time >= start_time_today and self.data.get("quiz_started") == False:
                 self.data["quiz_started"] = True
                 await self.start_quiz()
 
-            # Check if it's time to reveal answers
-            reveal_time_str = self.data.get("reveal_time", "18:00")
-            reveal_time = datetime.strptime(reveal_time_str, "%H:%M")  # Parse to datetime object
-            reveal_time_today = current_time.replace(hour=reveal_time.hour, minute=reveal_time.minute, second=0, microsecond=0)
-
-            # If the current time is greater than or equal to the reveal time, and quiz answers are not revealed
-            if current_time >= reveal_time_today and self.data["quiz_ended"] == False:
-                self.data["quiz_ended"] = True
+            # Check if it's time to reveal answers (6 PM)
+            if current_time >= reveal_time_today and self.data.get("quiz_started") == True:
                 self.data["quiz_started"] = False
+                self.data["quiz_finished_today"] = True
                 await self.reveal_answers()
 
         except Exception as e:
@@ -147,7 +151,7 @@ class Quiz(commands.Cog):
             return
         try:
             question = random.choice(self.questions)  # Randomly select a question
-            await channel.send(f"Selected question: {question['question']}")
+            # await channel.send(f"Selected question: {question['question']}")
 
             # Saving the selected question data to the quiz state
             self.data["current_quiz"] = {
@@ -233,28 +237,25 @@ class Quiz(commands.Cog):
         SaveJson("DataFiles/quiz-data.json", self.data)
         await interaction.response.send_message(f"Quiz channel set to {channel.mention}", ephemeral=True, delete_after=5)
 
-    @app_commands.command(name="set_quiz_start_time", description="Set the daily quiz start time (24-hour format, HH:MM)")
+    @app_commands.command(name="set_quiz_time", description="Set the daily quiz start time (24-hour format, HH:MM)")
     @commands.has_permissions(administrator=True)
-    async def set_quiz_start_time(self, interaction: discord.Interaction, time: str):
+    async def set_quiz_time(self, interaction: discord.Interaction, start_time: str, end_time: str):
         try:
-            datetime.strptime(time, "%H:%M")
-            self.data["quiz_time"] = time
+            # Parse start time and set seconds and microseconds to 0
+            start_time_obj = datetime.strptime(start_time, "%H:%M").replace(second=0, microsecond=0)
+            self.data["quiz_time"] = start_time_obj.strftime("%H:%M")  # Store the time as a string
+
+            # Parse end time and set seconds and microseconds to 0
+            end_time_obj = datetime.strptime(end_time, "%H:%M").replace(second=0, microsecond=0)
+            self.data["reveal_time"] = end_time_obj.strftime("%H:%M")  # Store the time as a string
+
+            # Save the updated data
             SaveJson("DataFiles/quiz-data.json", self.data)
-            await interaction.response.send_message(f"Daily quiz time set to {time}", ephemeral=True, delete_after=5)
+            
+            # Send a confirmation message
+            await interaction.response.send_message(f"Daily quiz time set to {start_time} and results reveal time set to {end_time}", ephemeral=True, delete_after=10)
         except ValueError:
             await interaction.response.send_message("Invalid time format. Please use HH:MM (24-hour format)")
-
-    @app_commands.command(name="set_quiz_end_time", description="Set the daily quiz end time (24-hour format, HH:MM)")
-    @commands.has_permissions(administrator=True)
-    async def set_quiz_end_time(self, interaction: discord.Interaction, time: str):
-        try:
-            datetime.strptime(time, "%H:%M")
-            self.data["reveal_time"] = time
-            SaveJson("DataFiles/quiz-data.json", self.data)
-            await interaction.response.send_message(f"Daily quiz results reveal time set to {time}", ephemeral=True, delete_after=5)
-        except ValueError:
-            await interaction.response.send_message("Invalid time format. Please use HH:MM (24-hour format)")
-
 
     @app_commands.command(name="start_quiz", description="start the daily quiz")
     @commands.has_permissions(administrator=True)
