@@ -4,161 +4,152 @@ import asyncio
 import discord
 from discord import app_commands, FFmpegPCMAudio, PCMVolumeTransformer
 from discord.ext import commands
-from discord.ext import commands
 from discord.utils import get
-from discord import FFmpegPCMAudio, PCMVolumeTransformer
+from yt_dlp import YoutubeDL
 
 class Music(commands.Cog):
-    def __init__(self, client):
+    def __init__(self, client: commands.Bot):
         self.client = client
-        self.music_queue = []
-        self.current_audio_file = None
-        self.repeat = False
-        self.last_interaction = None
+        self.music_queue: list[str] = []
+        self.current_audio_file: str | None = None
+        self.repeat: bool = False
+        self.last_interaction: discord.Interaction | None = None
 
     @commands.Cog.listener()
     async def on_ready(self):
         await self.client.tree.sync()
 
-    async def is_music_channel(interaction: discord.Interaction):
+    @staticmethod
+    async def is_music_channel(interaction: discord.Interaction) -> bool:
         return interaction.channel.name == 'music'
 
     @app_commands.check(is_music_channel)
-    @app_commands.command(name="play", description="Play music based on a name or random from a folder")
-    @app_commands.describe(song_name="The name of the song to play or 'random' for a random song.")
-    async def play(self, interaction: discord.Interaction, song_name: str):
+    @app_commands.command(name="play_youtube", description="Play music from YouTube")
+    @app_commands.describe(youtube_url="The YouTube URL of the song to play")
+    async def play_youtube_link(self, interaction: discord.Interaction, youtube_url: str):
         await interaction.response.defer()
-        self.last_interaction = interaction
+        
         if not interaction.user.voice:
-            await interaction.followup.send("You need to be in a voice channel for me to play music.")
+            await interaction.followup.send("You need to be in a voice channel first!")
             return
+            
         voice_client = interaction.guild.voice_client
         if voice_client is None:
             channel = interaction.user.voice.channel
             voice_client = await channel.connect()
+        
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+            'quiet': True,
+            'extractaudio': True,
+            'forcejson': True,
+            'noplaylist': True,
+        }
+
+        try:
+            with YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(youtube_url, download=False)
+                url = info['url']
+                title = info.get('title', 'Unknown title')
+
+            source = FFmpegPCMAudio(url, executable="ffmpeg")
+            voice_client.play(
+                source, 
+                after=lambda e: asyncio.run_coroutine_threadsafe(
+                    self.play_next(interaction), 
+                    self.client.loop
+                ) if e is None else print(f"Error in playback: {e}")
+            )
+
+            await interaction.followup.send(f"Now playing: **{title}**")
+        except Exception as e:
+            await interaction.followup.send(f"An error occurred: {str(e)}")
+
+    async def play_local_song(self, interaction: discord.Interaction, song_name: str):
+        if not self.music_queue:
+            await interaction.followup.send("No songs in queue.")
+            return
+
+        voice_client = interaction.guild.voice_client
+        if not voice_client:
+            await interaction.followup.send("Not connected to a voice channel.")
+            return
+
+        song_path = os.path.join("Songs", self.music_queue[0])
+        self.current_audio_file = self.music_queue.pop(0)
+
+        try:
+            source = FFmpegPCMAudio(song_path, executable="ffmpeg")
+            voice_client.play(
+                source,
+                after=lambda e: asyncio.run_coroutine_threadsafe(
+                    self.play_next(interaction),
+                    self.client.loop
+                ) if e is None else print(f"Error in playback: {e}")
+            )
+            await interaction.followup.send(f"Now playing: **{self.current_audio_file}**")
+        except Exception as e:
+            await interaction.followup.send(f"An error occurred: {str(e)}")
+            await self.play_next(interaction)
+
+    async def play_next(self, interaction: discord.Interaction):
+        if self.repeat and self.current_audio_file:
+            self.music_queue.append(self.current_audio_file)
+        
+        if self.music_queue:
+            await self.play_local_song(interaction, self.music_queue[0])
+        else:
+            await interaction.followup.send("Queue is empty. Add more songs!")
+
+    @app_commands.check(is_music_channel)
+    @app_commands.command(name="play", description="Play music from local files")
+    @app_commands.describe(song_name="The name of the song to play or 'random' for a random song")
+    async def play(self, interaction: discord.Interaction, song_name: str):
+        await interaction.response.defer()
+        self.last_interaction = interaction
+
+        if not interaction.user.voice:
+            await interaction.followup.send("You need to be in a voice channel first!")
+            return
+
+        voice_client = interaction.guild.voice_client
+        if voice_client is None:
+            channel = interaction.user.voice.channel
+            voice_client = await channel.connect()
+
+        if "youtube.com" in song_name or "youtu.be" in song_name:
+            await self.play_youtube_link(interaction, song_name)
+            return
+
         audio_folder = "Songs"
-        audio_files = [file for file in os.listdir(audio_folder) if file.endswith((".mp3", ".m4a", ".flac"))]
+        audio_files = [file for file in os.listdir(audio_folder) 
+                      if file.endswith((".mp3", ".m4a", ".flac"))]
+        
         if not audio_files:
             await interaction.followup.send("No audio files found in the Songs folder.")
             return
+
         if song_name.lower() == 'random':
             random.shuffle(audio_files)
         else:
             similar_songs = [file for file in audio_files if song_name.lower() in file.lower()]
             if not similar_songs:
-                await interaction.followup.send(f"No songs found similar to '{song_name}'.")
+                await interaction.followup.send(f"No songs found matching '{song_name}'.")
                 return
             audio_files = similar_songs
+
         self.music_queue.extend(audio_files)
+        
         if not voice_client.is_playing():
             await self.play_next(interaction)
         else:
-            if "youtube.com" in song_name or "youtu.be" in song_name:  # Check if the input is a YouTube link
-                await self.play_youtube_link(interaction, song_name, voice_client)
-            else:
-                await self.play_local_song(interaction, song_name, voice_client)
+            await interaction.followup.send(f"Added {len(audio_files)} song(s) to the queue!")
 
-    async def play_next(self, interaction):
-        if not self.music_queue and not self.repeat:
-            await interaction.followup.send("The music queue is empty.")
-            return
-        if not self.repeat:
-            self.current_audio_file = self.music_queue.pop(0)
-        audio_path = os.path.join("Songs", self.current_audio_file)
-        source = FFmpegPCMAudio(source=audio_path)
-        voice_client = interaction.guild.voice_client
-        if voice_client:
-            voice_client.play(PCMVolumeTransformer(source, volume=0.2), after=self.after_playing)
-            await interaction.followup.send(f"Now playing: {self.current_audio_file}")
-    def after_playing(self, error):
-        if self.last_interaction:
-            if not self.repeat:
-                coroutine = self.play_next(self.last_interaction)
-            else:
-                coroutine = self.start_repeat(self.last_interaction)
-            
-            future = asyncio.run_coroutine_threadsafe(coroutine, self.client.loop)
-            try:
-                future.result()
-            except Exception as e:
-                print(f'Error when trying to play next song: {e}')
-            if error:
-                print(f'Error: {error}')
-            else:
-                print(f'Finished playing {self.current_audio_file}')
-
-    @app_commands.check(is_music_channel)
-    @app_commands.command(name="skip", description="Skip the current song")
-    async def skip(self, interaction: discord.Interaction):
-        voice_client = interaction.guild.voice_client
-        if voice_client and voice_client.is_playing():
-            voice_client.stop()
-            await interaction.response.send_message("Skipping to the next song.")
-        else:
-            await interaction.response.send_message("I'm not playing any music.")
-
-    @app_commands.check(is_music_channel)
-    @app_commands.command(name="volume", description="Set the audio volume")
-    async def volume(self, interaction: discord.Interaction, volume: float):
-        await interaction.response.defer()
-        voice_client = interaction.guild.voice_client
-        if voice_client and voice_client.source:
-            voice_client.source.volume = volume
-            await interaction.followup.send(f"Volume set to {volume:.2f}")
-        else:
-            await interaction.followup.send("No music is currently playing.")
-
-    @app_commands.check(is_music_channel)
-    @app_commands.command(name="pause", description="Pause the music")
-    async def pause(self, interaction: discord.Interaction):
-        voice_client = interaction.guild.voice_client
-        if voice_client and voice_client.is_playing():
-            voice_client.pause()
-            await interaction.response.send_message("Music paused.")
-        else:
-            await interaction.response.send_message("I'm not playing any music or music is already paused.")
-
-    @app_commands.check(is_music_channel)
-    @app_commands.command(name="resume", description="Resume the music")
-    async def resume(self, interaction: discord.Interaction):
-        voice_client = interaction.guild.voice_client
-        if voice_client and voice_client.is_paused():
-            voice_client.resume()
-            await interaction.response.send_message("Music resumed.")
-        else:
-            await interaction.response.send_message("I'm not playing any music or music is not paused.")
-
-    @app_commands.check(is_music_channel)
-    @app_commands.command(name="stop", description="Stop the music and clear the queue")
-    async def stop(self, interaction: discord.Interaction):
-        voice_client = interaction.guild.voice_client
-        if voice_client and voice_client.is_playing():
-            voice_client.stop()
-            self.music_queue.clear()  # Clear the music queue
-            self.repeat = False  # Turn off repeat
-            await interaction.response.send_message("Music stopped and queue cleared.")
-        else:
-            await interaction.response.send_message("I'm not playing any music.")
-
-    @app_commands.check(is_music_channel)
-    @app_commands.command(name="repeat", description="Toggle repeat for the current song")
-    async def repeat(self, interaction: discord.Interaction):
-        self.repeat = not self.repeat
-        message = "Repeat is now enabled." if self.repeat else "Repeat is now disabled."
-        await interaction.response.send_message(message)
-    async def start_repeat(self, interaction):
-        if self.current_audio_file:
-            await self.play_next(interaction)
-
-    @app_commands.check(is_music_channel)
-    @app_commands.command(name="queue", description="Show the music queue")
-    async def queue(self, interaction: discord.Interaction):
-        if not self.music_queue:
-            await interaction.response.send_message("The music queue is empty.")
-            return
-        queue_text = "\n".join(f"{index + 1}. {song}" for index, song in enumerate(self.music_queue))
-        await interaction.response.send_message(f"Music Queue:\n{queue_text}")
-
-async def setup(client):
+async def setup(client: commands.Bot):
     await client.add_cog(Music(client))
-    print("Music Online")
+    print("Music Cog is now online!")
