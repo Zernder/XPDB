@@ -159,12 +159,15 @@ class Quiz(commands.Cog):
 
         if not self.data.get("quiz_channel_id"):
             print("Error: Quiz channel not set.")
-            return  # Remove the invalid channel.send() call here
+            return  # Remove invalid channel.send()
 
         channel = self.client.get_channel(self.data["quiz_channel_id"])
         if not channel:
             print(f"Error: Invalid channel ID: {self.data['quiz_channel_id']}")
             return
+
+        # Initialize question here to avoid NameError
+        category, question = None, None
 
         try:
             # Get random question from enabled categories
@@ -173,9 +176,8 @@ class Quiz(commands.Cog):
             if not question:
                 print("No questions available in enabled categories")
                 return
-            # await channel.send(f"Selected question: {question['question']}")
 
-            # Saving the selected question data to the quiz state
+            # --- ONLY KEEP THIS DATA ASSIGNMENT ---
             self.data["current_quiz"] = {
                 "question": question["question"],
                 "choices": question["choices"],
@@ -183,24 +185,15 @@ class Quiz(commands.Cog):
                 "revealed": False,
                 "answers": {}
             }
-            SaveJson("DataFiles/quiz-data.json", self.data)  # Save updated quiz state
+            SaveJson("DataFiles/quiz-data.json", self.data)
 
-        except IndexError:
-            print("Error: No questions available.")  # This will be raised if self.questions is empty.
         except Exception as e:
-            print(f"Unexpected error occurred: {e}")  # Catch any other exceptions
+            print(f"Failed to start quiz: {e}")
             import traceback
-            traceback.print_exc()  # This will print the full stack trace
+            traceback.print_exc()
+            return  # Exit if an error occurs
 
-        self.data["current_quiz"] = {
-            "question": question["question"],
-            "choices": question["choices"],
-            "correct_index": question["correct_index"],
-            "revealed": False,
-            "answers": {}
-        }
-        SaveJson("DataFiles/quiz-data.json", self.data)
-
+        # Send quiz ONLY if question is valid
         print("Sending quiz to channel...")
         view = QuizView(
             question["question"],
