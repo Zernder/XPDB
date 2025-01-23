@@ -31,16 +31,6 @@
             "correct_index": 1
         },
         {
-            "question": "Which country is known as the Land of the Rising Sun?",
-            "choices": [
-                "Japan",
-                "South Korea",
-                "China",
-                "Thailand"
-            ],
-            "correct_index": 0
-        },
-        {
             "question": "Who was the first emperor of China?",
             "choices": [
                 "Han Wudi",
@@ -71,26 +61,6 @@
             "correct_index": 1
         },
         {
-            "question": "What is the capital city of Canada?",
-            "choices": [
-                "Toronto",
-                "Montreal",
-                "Ottawa",
-                "Vancouver"
-            ],
-            "correct_index": 2
-        },
-        {
-            "question": "Who is the author of 'One Hundred Years of Solitude'?",
-            "choices": [
-                "Pablo Neruda",
-                "Mario Vargas Llosa",
-                "Gabriel Garcia Marquez",
-                "Jorge Luis Borges"
-            ],
-            "correct_index": 2
-        },
-        {
             "question": "What is the capital of Australia?",
             "choices": [
                 "Sydney",
@@ -111,26 +81,6 @@
             "correct_index": 3
         },
         {
-            "question": "Which country was formerly known as Ceylon?",
-            "choices": [
-                "Sri Lanka",
-                "Nepal",
-                "Bangladesh",
-                "Myanmar"
-            ],
-            "correct_index": 0
-        },
-        {
-            "question": "Which of these elements is a noble gas?",
-            "choices": [
-                "Neon",
-                "Oxygen",
-                "Carbon",
-                "Nitrogen"
-            ],
-            "correct_index": 0
-        },
-        {
             "question": "Who was the first woman to fly solo across the Atlantic Ocean?",
             "choices": [
                 "Bessie Coleman",
@@ -139,6 +89,56 @@
                 "Harriet Quimby"
             ],
             "correct_index": 1
+        },
+        {
+            "question": "What is the capital of Iceland?",
+            "choices": [
+                "Helsinki",
+                "Reykjavik",
+                "Oslo",
+                "Copenhagen"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "What is the deepest part of the ocean?",
+            "choices": [
+                "Mariana Trench",
+                "Challenger Deep",
+                "Philippine Trench",
+                "Java Trench"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "Which city is home to the ancient landmark 'The Colosseum'?",
+            "choices": [
+                "Athens",
+                "Cairo",
+                "Paris",
+                "Rome"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "What is the chemical symbol for the element gold?",
+            "choices": [
+                "Fe",
+                "Ag",
+                "Pb",
+                "Au"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "Which planet is known as the Red Planet?",
+            "choices": [
+                "Mars",
+                "Jupiter",
+                "Venus",
+                "Saturn"
+            ],
+            "correct_index": 0
         },
         {
             "question": "What is the hardest natural substance on Earth?",
@@ -151,14 +151,54 @@
             "correct_index": 3
         },
         {
-            "question": "What is the capital of Iceland?",
+            "question": "What is the capital city of Canada?",
             "choices": [
-                "Helsinki",
-                "Reykjavik",
-                "Oslo",
-                "Copenhagen"
+                "Toronto",
+                "Montreal",
+                "Ottawa",
+                "Vancouver"
             ],
-            "correct_index": 1
+            "correct_index": 2
+        },
+        {
+            "question": "Who is the author of 'One Hundred Years of Solitude'?",
+            "choices": [
+                "Pablo Neruda",
+                "Mario Vargas Llosa",
+                "Gabriel Garcia Marquez",
+                "Jorge Luis Borges"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "Which of these elements is a noble gas?",
+            "choices": [
+                "Neon",
+                "Oxygen",
+                "Carbon",
+                "Nitrogen"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "Which country is known as the Land of the Rising Sun?",
+            "choices": [
+                "Japan",
+                "South Korea",
+                "China",
+                "Thailand"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "Which country was formerly known as Ceylon?",
+            "choices": [
+                "Sri Lanka",
+                "Nepal",
+                "Bangladesh",
+                "Myanmar"
+            ],
+            "correct_index": 0
         }
     ],
     "Gaming": [

@@ -54,7 +54,6 @@ class QuizView(discord.ui.View):
         
         for i, choice in enumerate(choices):
             button = discord.ui.Button(label=choice, style=discord.ButtonStyle.primary, custom_id=f"choice_{i}")
-            # Now, the callback is correctly tied to the value of 'i' by passing 'i' explicitly to the handler
             button.callback = self.create_response_callback(i)
             self.add_item(button)
 
@@ -76,9 +75,10 @@ class Quiz(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.data: Dict = LoadJson("DataFiles/quiz-data.json")
-        self.questions: Dict[str, List] = LoadJson("DataFiles/questions.json")  # Changed to Dict
+        self.questions: Dict[str, List] = LoadJson("DataFiles/questions.json")
         self.used_questions: Dict[str, List] = LoadJson("DataFiles/used-questions.json")
 
+        # Initialize default data if empty
         if not self.data:
             self.data = {
                 "current_quiz": {},
@@ -86,11 +86,16 @@ class Quiz(commands.Cog):
                 "quiz_time": "06:00",
                 "reveal_time": "18:00",
                 "quiz_channel_id": None,
-                "quiz_started": False,
+                "quiz_started": False,  # Ensure default is False
                 "quiz_finished_today": False,
-                "enabled_categories": ["General Knowledge"]  # Default enabled category
+                "enabled_categories": ["General Knowledge"]
             }
             SaveJson("DataFiles/quiz-data.json", self.data)
+        else:
+            # Reset quiz_started if bot restarts with no active quiz
+            if self.data.get("quiz_started") and not self.data.get("current_quiz"):
+                self.data["quiz_started"] = False
+                SaveJson("DataFiles/quiz-data.json", self.data)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -101,41 +106,58 @@ class Quiz(commands.Cog):
     @tasks.loop(minutes=1)
     async def check_quiz_time(self):
         try:
-            # Get the current time in Arizona time (MST)
             arizona_tz = pytz.timezone("US/Arizona")
             current_time = datetime.now(arizona_tz)
 
-            # Set quiz start time to 6:00 AM
-            quiz_time_str = self.data["quiz_time"]
-            quiz_time = datetime.strptime(quiz_time_str, "%H:%M")
-            start_time_today = current_time.replace(hour=quiz_time.hour, minute=quiz_time.minute, second=0, microsecond=0)
+            # Parse quiz and reveal times as timezone-aware datetimes
+            quiz_time = datetime.strptime(self.data["quiz_time"], "%H:%M").time()
+            start_time_today = current_time.replace(
+                hour=quiz_time.hour, minute=quiz_time.minute, second=0, microsecond=0
+            )
 
-            # Set quiz reveal time to 6:00 PM
-            reveal_time_str = self.data["reveal_time"]
-            reveal_time = datetime.strptime(reveal_time_str, "%H:%M")
-            reveal_time_today = current_time.replace(hour=reveal_time.hour, minute=reveal_time.minute, second=0, microsecond=0)
+            reveal_time = datetime.strptime(self.data["reveal_time"], "%H:%M").time()
+            reveal_time_today = current_time.replace(
+                hour=reveal_time.hour, minute=reveal_time.minute, second=0, microsecond=0
+            )
 
-            # Reset quiz_finished_today flag at the start of the new day (midnight)
+            # Reset daily flags at midnight
             if current_time.hour == 0 and current_time.minute == 0:
                 self.data["quiz_finished_today"] = False
+                SaveJson("DataFiles/quiz-data.json", self.data)
 
-            # Skip the logic if the quiz is finished today
-            if self.data.get("quiz_finished_today", True):
-                return
-
-            # Check if it's time to start the quiz (6 AM)
-            if current_time >= start_time_today and self.data.get("quiz_started") == False:
+            # Quiz Start Logic
+            if (current_time >= start_time_today 
+                and not self.data["quiz_started"]
+                and not self.data["quiz_finished_today"]):
+                
                 self.data["quiz_started"] = True
-                await self.start_quiz()
+                SaveJson("DataFiles/quiz-data.json", self.data)  # Immediate save
+                
+                success = await self.start_quiz()
+                if not success:
+                    self.data["quiz_started"] = False
+                    self.data["quiz_finished_today"] = False
+                    SaveJson("DataFiles/quiz-data.json", self.data)
+                    print("Failed to start quiz, resetting state")
 
-            # Check if it's time to reveal answers (6 PM)
-            if current_time >= reveal_time_today and self.data.get("quiz_started") == True:
+            # Answer Reveal Logic
+            if (current_time >= reveal_time_today 
+                and self.data["quiz_started"]
+                and not self.data["current_quiz"].get("revealed", True)):
+                
+                await self.reveal_answers()
                 self.data["quiz_started"] = False
                 self.data["quiz_finished_today"] = True
-                await self.reveal_answers()
+                SaveJson("DataFiles/quiz-data.json", self.data)
 
         except Exception as e:
-            print(f"Error in check_quiz_time: {e}")
+            print(f"Critical error in check_quiz_time: {e}")
+            # Full state reset on critical failure
+            self.data["quiz_started"] = False
+            self.data["quiz_finished_today"] = False
+            SaveJson("DataFiles/quiz-data.json", self.data)
+            import traceback
+            traceback.print_exc()
 
     def get_random_question(self) -> tuple:
         enabled_categories = self.data.get("enabled_categories", [])
@@ -152,58 +174,98 @@ class Quiz(commands.Cog):
         
         return random.choice(available_questions)
 
-    async def start_quiz(self):
-        if self.data.get("quiz_started"):
-            print("Quiz already in progress")
-            return
-
-        if not self.data.get("quiz_channel_id"):
-            print("Error: Quiz channel not set.")
-            return  # Remove invalid channel.send()
-
-        channel = self.client.get_channel(self.data["quiz_channel_id"])
-        if not channel:
-            print(f"Error: Invalid channel ID: {self.data['quiz_channel_id']}")
-            return
-
-        # Initialize question here to avoid NameError
-        category, question = None, None
-
+    async def start_quiz(self) -> bool:
         try:
-            # Get random question from enabled categories
-            category, question = self.get_random_question()
-            
-            if not question:
-                print("No questions available in enabled categories")
-                return
+            # Log initial state
+            print(f"Start Quiz Called - Quiz Channel ID: {self.data.get('quiz_channel_id')}")
+            print(f"Enabled Categories: {self.data.get('enabled_categories')}")
 
-            # --- ONLY KEEP THIS DATA ASSIGNMENT ---
+            # Initialize current quiz data
             self.data["current_quiz"] = {
+                "answers": {},
+                "revealed": False
+            }
+
+            # Channel validation with more detailed logging
+            channel_id = self.data.get("quiz_channel_id")
+            if not channel_id:
+                print("FAILURE: No quiz channel set")
+                return False
+
+            channel = self.client.get_channel(channel_id)
+            if not channel:
+                print(f"FAILURE: Cannot find channel with ID {channel_id}")
+                return False
+
+            if not isinstance(channel, discord.TextChannel):
+                print(f"FAILURE: Channel {channel_id} is not a text channel")
+                return False
+
+            # Detailed permission check
+            bot_member = channel.guild.get_member(self.client.user.id)
+            if not bot_member:
+                print("FAILURE: Bot not found in guild")
+                return False
+
+            permissions = channel.permissions_for(bot_member)
+            if not permissions.send_messages:
+                print(f"FAILURE: No send messages permission in {channel.name}")
+                return False
+
+            # Question availability detailed logging
+            enabled_categories = self.data.get("enabled_categories", [])
+            print(f"Checking questions in categories: {enabled_categories}")
+
+            total_questions = sum(len(self.questions.get(cat, [])) for cat in enabled_categories)
+            print(f"Total questions available: {total_questions}")
+
+            if total_questions == 0:
+                print("FAILURE: No questions in enabled categories")
+                print(f"Questions dict: {self.questions}")
+                return False
+
+            # Get and validate question with more logging
+            category_result = self.get_random_question()
+            if not category_result or not category_result[1]:
+                print("FAILURE: No valid question found")
+                return False
+
+            category, question = category_result
+            print(f"Selected Question - Category: {category}")
+            print(f"Question: {question}")
+
+            if "question" not in question or "choices" not in question:
+                print("FAILURE: Invalid question format")
+                print(f"Question details: {question}")
+                return False
+
+            # Prepare current quiz data
+            self.data["current_quiz"].update({
                 "question": question["question"],
                 "choices": question["choices"],
                 "correct_index": question["correct_index"],
-                "revealed": False,
-                "answers": {}
-            }
+                "category": category
+            })
             SaveJson("DataFiles/quiz-data.json", self.data)
 
+            # Send quiz message
+            view = QuizView(
+                question["question"],
+                question["choices"],
+                question["correct_index"],
+                self.handle_quiz_callback
+            )
+            await channel.send("🎯 **Daily Quiz Time!**\n" + question["question"], view=view)
+            
+            # Move used question
+            self.move_question_to_used(question, category)
+            return True
+
         except Exception as e:
-            print(f"Failed to start quiz: {e}")
+            print(f"CRITICAL FAILURE in start_quiz: {str(e)}")
             import traceback
             traceback.print_exc()
-            return  # Exit if an error occurs
-
-        # Send quiz ONLY if question is valid
-        print("Sending quiz to channel...")
-        view = QuizView(
-            question["question"],
-            question["choices"],
-            question["correct_index"],
-            self.handle_quiz_callback
-        )
-
-        await channel.send("🎯 **Daily Quiz Time!**\n" + question["question"], view=view)
-        self.move_question_to_used(question, category)
+            return False
 
     def move_question_to_used(self, question: dict, category: str):
         """Moves a used question from active pool to used-questions.json"""
@@ -296,18 +358,53 @@ class Quiz(commands.Cog):
     @app_commands.command(name="start_quiz", description="start the daily quiz")
     @commands.has_permissions(administrator=True)
     async def start_quiz_command(self, interaction: discord.Interaction):
-        if self.data.get("quiz_started"):
-            await interaction.response.send_message("A quiz is already active!", ephemeral=True)
-            return
-            
-        # Manually trigger quiz flow
+        # Initial state reset
         self.data["quiz_started"] = True
-        await self.start_quiz()
-        await interaction.response.send_message("Quiz started!", ephemeral=True, delete_after=5)
-        
-        # Prevent automatic reveal time from triggering
-        self.data["quiz_finished_today"] = False
         SaveJson("DataFiles/quiz-data.json", self.data)
+        
+        try:
+            success = await self.start_quiz()
+            if success:
+                await interaction.response.send_message("✅ Quiz started successfully!", ephemeral=True, delete_after=5)
+                self.data["quiz_finished_today"] = False
+                SaveJson("DataFiles/quiz-data.json", self.data)
+            else:
+                # Get failure reason
+                failure_reason = self.get_failure_reason()
+                await interaction.response.send_message(
+                    f"❌ Failed to start quiz:\n{failure_reason}",
+                    ephemeral=True,
+                    delete_after=15
+                )
+        finally:
+            if not self.data.get("current_quiz"):
+                self.data["quiz_started"] = False
+                SaveJson("DataFiles/quiz-data.json", self.data)
+
+    def get_failure_reason(self) -> str:
+        """Returns detailed failure explanation"""
+        # Channel checks
+        if not self.data.get("quiz_channel_id"):
+            return "• No quiz channel set\nUse `/set_quiz_channel` first"
+        
+        channel = self.client.get_channel(self.data["quiz_channel_id"])
+        if not channel:
+            return "• Invalid channel ID\nRe-set with `/set_quiz_channel`"
+        
+        # Permission check
+        if channel and not channel.permissions_for(channel.guild.me).send_messages:
+            return "• Missing Send Messages permission\nCheck channel permissions"
+        
+        # Question checks
+        enabled_categories = self.data.get("enabled_categories", [])
+        if not enabled_categories:
+            return "• No enabled categories\nUse `/enable_category`"
+        
+        total_questions = sum(len(self.questions.get(cat, [])) for cat in enabled_categories)
+        if total_questions == 0:
+            return "• No questions in enabled categories\nAdd questions or reset with `/reset_questions`"
+        
+        return "• Unknown error\nCheck console logs"
 
 
     @app_commands.command(name="points", description="Check your quiz points")
@@ -333,6 +430,15 @@ class Quiz(commands.Cog):
         SaveJson("DataFiles/used-questions.json", self.used_questions)
         
         await interaction.response.send_message("All questions have been reset!", ephemeral=True)
+
+    @app_commands.command(name="force_reset_quiz", description="Emergency reset command")
+    @commands.has_permissions(administrator=True)
+    async def force_reset_quiz(self, interaction: discord.Interaction):
+        """Emergency reset command"""
+        self.data["quiz_started"] = False
+        self.data["current_quiz"] = {}
+        SaveJson("DataFiles/quiz-data.json", self.data)
+        await interaction.response.send_message("✅ Quiz state forcibly reset", ephemeral=True)
 
 async def setup(client):
     await client.add_cog(Quiz(client))
