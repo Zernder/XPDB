@@ -159,13 +159,13 @@ class Quiz(commands.Cog):
 
         if not self.data.get("quiz_channel_id"):
             print("Error: Quiz channel not set.")
-            await channel.send("Error: Quiz channel not set.", ephemeral=True, delete_after=5)
-            return
+            return  # Remove the invalid channel.send() call here
 
         channel = self.client.get_channel(self.data["quiz_channel_id"])
         if not channel:
             print(f"Error: Invalid channel ID: {self.data['quiz_channel_id']}")
             return
+
         try:
             # Get random question from enabled categories
             category, question = self.get_random_question()
