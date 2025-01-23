@@ -1,0 +1,45 @@
+{
+    "General Knowledge": [
+        {
+            "question": "What is the deepest part of the ocean?",
+            "choices": [
+                "Mariana Trench",
+                "Challenger Deep",
+                "Philippine Trench",
+                "Java Trench"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "Which city is home to the ancient landmark 'The Colosseum'?",
+            "choices": [
+                "Athens",
+                "Cairo",
+                "Paris",
+                "Rome"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "What is the chemical symbol for the element gold?",
+            "choices": [
+                "Fe",
+                "Ag",
+                "Pb",
+                "Au"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "Which planet is known as the Red Planet?",
+            "choices": [
+                "Mars",
+                "Jupiter",
+                "Venus",
+                "Saturn"
+            ],
+            "correct_index": 0
+        }
+    ],
+    "Gaming": []
+}

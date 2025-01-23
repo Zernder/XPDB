@@ -76,17 +76,19 @@ class Quiz(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.data: Dict = LoadJson("DataFiles/quiz-data.json")
-        self.questions: List[Dict] = LoadJson("DataFiles/questions.json")
+        self.questions: Dict[str, List] = LoadJson("DataFiles/questions.json")  # Changed to Dict
+        self.used_questions: Dict[str, List] = LoadJson("DataFiles/used-questions.json")
 
         if not self.data:
             self.data = {
                 "current_quiz": {},
                 "points": {},
-                "quiz_time": "06:00",  # When to run the quiz (24-hour format)
-                "reveal_time": "18:00",  # When to reveal answers (24-hour format)
+                "quiz_time": "06:00",
+                "reveal_time": "18:00",
                 "quiz_channel_id": None,
                 "quiz_started": False,
                 "quiz_finished_today": False,
+                "enabled_categories": ["General Knowledge"]  # Default enabled category
             }
             SaveJson("DataFiles/quiz-data.json", self.data)
 
@@ -135,9 +137,24 @@ class Quiz(commands.Cog):
         except Exception as e:
             print(f"Error in check_quiz_time: {e}")
 
+    def get_random_question(self) -> tuple:
+        enabled_categories = self.data.get("enabled_categories", [])
+        if not enabled_categories:
+            return None, None
+        
+        # Select category weighted by question count
+        available_questions = []
+        for category in enabled_categories:
+            available_questions.extend([(category, q) for q in self.questions.get(category, [])])
+        
+        if not available_questions:
+            return None, None
+        
+        return random.choice(available_questions)
+
     async def start_quiz(self):
-        if not self.questions:
-            print("Error: No questions available.")
+        if self.data.get("quiz_started"):
+            print("Quiz already in progress")
             return
 
         if not self.data.get("quiz_channel_id"):
@@ -150,7 +167,12 @@ class Quiz(commands.Cog):
             print(f"Error: Invalid channel ID: {self.data['quiz_channel_id']}")
             return
         try:
-            question = random.choice(self.questions)  # Randomly select a question
+            # Get random question from enabled categories
+            category, question = self.get_random_question()
+            
+            if not question:
+                print("No questions available in enabled categories")
+                return
             # await channel.send(f"Selected question: {question['question']}")
 
             # Saving the selected question data to the quiz state
@@ -186,7 +208,28 @@ class Quiz(commands.Cog):
             question["correct_index"],
             self.handle_quiz_callback
         )
+
         await channel.send("🎯 **Daily Quiz Time!**\n" + question["question"], view=view)
+        self.move_question_to_used(question, category)
+
+    def move_question_to_used(self, question: dict, category: str):
+        """Moves a used question from active pool to used-questions.json"""
+        try:
+            # Remove from active questions
+            if category in self.questions and question in self.questions[category]:
+                self.questions[category].remove(question)
+                SaveJson("DataFiles/questions.json", self.questions)
+
+            # Add to used questions
+            if category not in self.used_questions:
+                self.used_questions[category] = []
+            self.used_questions[category].append(question)
+            SaveJson("DataFiles/used-questions.json", self.used_questions)
+
+        except Exception as e:
+            print(f"Error moving question to used: {e}")
+            import traceback
+            traceback.print_exc()
 
     async def handle_quiz_callback(self, interaction: discord.Interaction, correct: bool, correct_answer: str):
         user_id = str(interaction.user.id)
@@ -260,62 +303,43 @@ class Quiz(commands.Cog):
     @app_commands.command(name="start_quiz", description="start the daily quiz")
     @commands.has_permissions(administrator=True)
     async def start_quiz_command(self, interaction: discord.Interaction):
-        if not self.questions:
-            print("Error: No questions available.")
+        if self.data.get("quiz_started"):
+            await interaction.response.send_message("A quiz is already active!", ephemeral=True)
             return
-
-        if not self.data.get("quiz_channel_id"):
-            print("Error: Quiz channel not set.")
-            return
-
-        channel = self.client.get_channel(self.data["quiz_channel_id"])
-        if not channel:
-            print(f"Error: Invalid channel ID: {self.data['quiz_channel_id']}")
-            return
-
-        print(f"Quiz channel found: {channel.name}")
-
-        try:
-            question = random.choice(self.questions)  # Randomly select a question
-            print(f"Selected question: {question['question']}")
-            print(f"Choices: {question['choices']}")
-
-            # Saving the selected question data to the quiz state
-            self.data["current_quiz"] = {
-                "question": question["question"],
-                "choices": question["choices"],
-                "correct_index": question["correct_index"],
-                "revealed": False,
-                "answers": {}
-            }
-            SaveJson("DataFiles/quiz-data.json", self.data)  # Save updated quiz state
-
-        except IndexError:
-            print("Error: No questions available.")  # This will be raised if self.questions is empty.
-        except Exception as e:
-            print(f"Unexpected error occurred: {e}")  # Catch any other exceptions
-            import traceback
-            traceback.print_exc()  # This will print the full stack trace
-
-        self.data["current_quiz"] = {
-            "question": question["question"],
-            "choices": question["choices"],
-            "correct_index": question["correct_index"],
-            "revealed": False,
-            "answers": {}
-        }
+            
+        # Manually trigger quiz flow
+        self.data["quiz_started"] = True
+        await self.start_quiz()
+        await interaction.response.send_message("Quiz started!", ephemeral=True, delete_after=5)
+        
+        # Prevent automatic reveal time from triggering
+        self.data["quiz_finished_today"] = False
         SaveJson("DataFiles/quiz-data.json", self.data)
 
-        await interaction.response.send_message(f"Sending quiz to channel...", ephemeral=True, delete_after=20)
-        print("Sending quiz to channel...")
-        view = QuizView(
-            question["question"],
-            question["choices"],
-            question["correct_index"],
-            self.handle_quiz_callback
-        )
-        await channel.send("🎯 **Daily Quiz Time!**\n" + question["question"], view=view)
 
+    @app_commands.command(name="points", description="Check your quiz points")
+    async def show_points(self, interaction: discord.Interaction):
+        """Displays the user's accumulated quiz points."""
+        user_id = str(interaction.user.id)
+        points = self.data["points"].get(user_id, 0)
+        await interaction.response.send_message(f"🎉 You currently have **{points}** quiz points!", ephemeral=True)
+
+    @app_commands.command(name="reset_questions", description="Reset all used questions back to active pool")
+    @commands.has_permissions(administrator=True)
+    async def reset_questions(self, interaction: discord.Interaction):
+        # Move all used questions back to their categories
+        for category in self.used_questions:
+            if category not in self.questions:
+                self.questions[category] = []
+            self.questions[category].extend(self.used_questions[category])
+        
+        # Clear used questions
+        self.used_questions = {category: [] for category in self.used_questions}
+        
+        SaveJson("DataFiles/questions.json", self.questions)
+        SaveJson("DataFiles/used-questions.json", self.used_questions)
+        
+        await interaction.response.send_message("All questions have been reset!", ephemeral=True)
 
 async def setup(client):
     await client.add_cog(Quiz(client))

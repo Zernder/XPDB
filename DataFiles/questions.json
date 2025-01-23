@@ -1,352 +1,326 @@
-[
-    {
-        "question": "What is the longest river in South America?",
-        "choices": [
-            "Parana River",
-            "Orinoco River",
-            "Mississippi River",
-            "Amazon River"
-        ],
-        "correct_index": 3
-    },
-    {
-        "question": "Which scientist is known for the theory of general relativity?",
-        "choices": [
-            "Albert Einstein",
-            "Isaac Newton",
-            "Nikola Tesla",
-            "Marie Curie"
-        ],
-        "correct_index": 0
-    },
-    {
-        "question": "What is the largest desert in the world?",
-        "choices": [
-            "Sahara Desert",
-            "Antarctic Desert",
-            "Gobi Desert",
-            "Kalahari Desert"
-        ],
-        "correct_index": 1
-    },
-    {
-        "question": "Which country is known as the Land of the Rising Sun?",
-        "choices": [
-            "Japan",
-            "South Korea",
-            "China",
-            "Thailand"
-        ],
-        "correct_index": 0
-    },
-    {
-        "question": "Who was the first emperor of China?",
-        "choices": [
-            "Han Wudi",
-            "Qin Shi Huang",
-            "Cao Cao",
-            "Sun Tzu"
-        ],
-        "correct_index": 1
-    },
-    {
-        "question": "What is the chemical symbol for the element gold?",
-        "choices": [
-            "Fe",
-            "Ag",
-            "Pb",
-            "Au"
-        ],
-        "correct_index": 3
-    },
-    {
-        "question": "Which planet is known as the Red Planet?",
-        "choices": [
-            "Mars",
-            "Jupiter",
-            "Venus",
-            "Saturn"
-        ],
-        "correct_index": 0
-    },
-    {
-        "question": "In which year did the Titanic sink?",
-        "choices": [
-            "1923",
-            "1900",
-            "1912",
-            "1930"
-        ],
-        "correct_index": 2
-    },
-    {
-        "question": "Which element has the atomic number 6?",
-        "choices": [
-            "Oxygen",
-            "Carbon",
-            "Nitrogen",
-            "Helium"
-        ],
-        "correct_index": 1
-    },
-    {
-        "question": "What is the capital city of Canada?",
-        "choices": [
-            "Toronto",
-            "Montreal",
-            "Ottawa",
-            "Vancouver"
-        ],
-        "correct_index": 2
-    },
-    {
-        "question": "Who is the author of 'One Hundred Years of Solitude'?",
-        "choices": [
-            "Pablo Neruda",
-            "Mario Vargas Llosa",
-            "Gabriel Garcia Marquez",
-            "Jorge Luis Borges"
-        ],
-        "correct_index": 2
-    },
-    {
-        "question": "What is the deepest part of the ocean?",
-        "choices": [
-            "Mariana Trench",
-            "Challenger Deep",
-            "Philippine Trench",
-            "Java Trench"
-        ],
-        "correct_index": 1
-    },
-    {
-        "question": "What is the capital of Australia?",
-        "choices": [
-            "Sydney",
-            "Melbourne",
-            "Brisbane",
-            "Canberra"
-        ],
-        "correct_index": 3
-    },
-    {
-        "question": "Which of the following artists is known for the painting 'Guernica'?",
-        "choices": [
-            "Vincent van Gogh",
-            "Claude Monet",
-            "Salvador Dali",
-            "Pablo Picasso"
-        ],
-        "correct_index": 3
-    },
-    {
-        "question": "Which country was formerly known as Ceylon?",
-        "choices": [
-            "Sri Lanka",
-            "Nepal",
-            "Bangladesh",
-            "Myanmar"
-        ],
-        "correct_index": 0
-    },
-    {
-        "question": "Which of these elements is a noble gas?",
-        "choices": [
-            "Neon",
-            "Oxygen",
-            "Carbon",
-            "Nitrogen"
-        ],
-        "correct_index": 0
-    },
-    {
-        "question": "Who was the first woman to fly solo across the Atlantic Ocean?",
-        "choices": [
-            "Bessie Coleman",
-            "Amelia Earhart",
-            "Jacqueline Cochran",
-            "Harriet Quimby"
-        ],
-        "correct_index": 1
-    },
-    {
-        "question": "What is the hardest natural substance on Earth?",
-        "choices": [
-            "Iron",
-            "Gold",
-            "Platinum",
-            "Diamond"
-        ],
-        "correct_index": 3
-    },
-    {
-        "question": "What is the capital of Iceland?",
-        "choices": [
-            "Helsinki",
-            "Reykjavik",
-            "Oslo",
-            "Copenhagen"
-        ],
-        "correct_index": 1
-    },
-    {
-        "question": "Which city is home to the ancient landmark 'The Colosseum'?",
-        "choices": [
-            "Athens",
-            "Cairo",
-            "Paris",
-            "Rome"
-        ],
-        "correct_index": 3
-    },
-    {
-        "question": "In 'The Legend of Zelda: Ocarina of Time,' what is the name of the main antagonist?",
-        "choices": [
-            "Dark Link",
-            "Vaati",
-            "Darkseid",
-            "Ganon"
-        ],
-        "correct_index": 3
-    },
-    {
-        "question": "In 'Final Fantasy VII,' who is the primary protagonist?",
-        "choices": [
-            "Cloud Strife",
-            "Tifa Lockhart",
-            "Barrett Wallace",
-            "Sephiroth"
-        ],
-        "correct_index": 0
-    },
-    {
-        "question": "What is the name of the fictional continent where 'The Witcher' series is set?",
-        "choices": [
-            "Tamriel",
-            "Thedas",
-            "The Continent",
-            "Eorzea"
-        ],
-        "correct_index": 2
-    },
-    {
-        "question": "In 'Overwatch,' which hero is known for using a giant hammer and has a pet robot?",
-        "choices": [
-            "Winston",
-            "Bastion",
-            "Reinhardt",
-            "Brigitte"
-        ],
-        "correct_index": 3
-    },
-    {
-        "question": "In the 'Dark Souls' series, which character is famously known as the 'Chosen Undead'?",
-        "choices": [
-            "Artorias",
-            "Gwynevere",
-            "The Player Character",
-            "Solaire of Astora"
-        ],
-        "correct_index": 2
-    },
-    {
-        "question": "In 'Bloodborne,' what is the name of the city where the game takes place?",
-        "choices": [
-            "Anor Londo",
-            "Central Yharnam",
-            "Yharnam",
-            "Lothric"
-        ],
-        "correct_index": 2
-    },
-    {
-        "question": "In 'Metal Gear Solid 2: Sons of Liberty,' which character is revealed to be the main protagonist instead of Raiden?",
-        "choices": [
-            "Big Boss",
-            "Solid Snake",
-            "Otacon",
-            "The Boss"
-        ],
-        "correct_index": 1
-    },
-    {
-        "question": "In 'Persona 5,' what is the name of the protagonist's Persona?",
-        "choices": [
-            "Arsène",
-            "Oberon",
-            "Ishtar",
-            "Skeeter"
-        ],
-        "correct_index": 0
-    },
-    {
-        "question": "In 'Chrono Trigger,' which of the following characters is from the future?",
-        "choices": [
-            "Robo",
-            "Lucca",
-            "Magus",
-            "Frog"
-        ],
-        "correct_index": 0
-    },
-    {
-        "question": "In 'The Elder Scrolls V: Skyrim,' which shout is used to launch enemies into the air?",
-        "choices": [
-            "Yol Toor Shul",
-            "Dragonrend",
-            "Throw Voice",
-            "Unrelenting Force"
-        ],
-        "correct_index": 3
-    },
-    {
-        "question": "In *Dark Souls III*, what is the true identity of the 'Nameless King'?",
-        "choices": [
-            "The son of Gwyn",
-            "The first Firekeeper",
-            "A former king who turned into a dragon",
-            "The God of Thunder"
-        ],
-        "correct_index": 2
-    },
-    {
-        "question": "In *The Legend of Zelda: Majora's Mask*, what is the name of the mysterious character who appears in the game's final scenes?",
-        "choices": [
-            "Skull Kid",
-            "The Happy Mask Salesman",
-            "The Moon Child",
-            "The Moon's Messenger"
-        ],
-        "correct_index": 1
-    },
-    {
-        "question": "In *Final Fantasy Tactics*, which character is revealed to have been manipulating the events of the game from behind the scenes?",
-        "choices": [
-            "Delita Heiral",
-            "Algus Sadalfas",
-            "Ramza Beoulve",
-            "Meliadoul Tengille"
-        ],
-        "correct_index": 0
-    },
-    {
-        "question": "In *Nier: Automata*, which of the following is the true identity of the character known as 'A2'?",
-        "choices": [
-            "The twin sister of 2B",
-            "A corrupted machine lifeform",
-            "A former YoRHa android who rebelled",
-            "The creator of the YoRHa units"
-        ],
-        "correct_index": 2
-    },
-    {
-        "question": "In *The Witcher 3: Wild Hunt*, what is the name of the entity who serves as the main antagonist of the game?",
-        "choices": [
-            "The Lodge of Sorceresses",
-            "Eredin",
-            "The White Frost",
-            "The Wild Hunt"
-        ],
-        "correct_index": 1
-    }
-]
+{
+    "General Knowledge": [
+        {
+            "question": "What is the longest river in South America?",
+            "choices": [
+                "Parana River",
+                "Orinoco River",
+                "Mississippi River",
+                "Amazon River"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "Which scientist is known for the theory of general relativity?",
+            "choices": [
+                "Albert Einstein",
+                "Isaac Newton",
+                "Nikola Tesla",
+                "Marie Curie"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "What is the largest desert in the world?",
+            "choices": [
+                "Sahara Desert",
+                "Antarctic Desert",
+                "Gobi Desert",
+                "Kalahari Desert"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "Which country is known as the Land of the Rising Sun?",
+            "choices": [
+                "Japan",
+                "South Korea",
+                "China",
+                "Thailand"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "Who was the first emperor of China?",
+            "choices": [
+                "Han Wudi",
+                "Qin Shi Huang",
+                "Cao Cao",
+                "Sun Tzu"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "In which year did the Titanic sink?",
+            "choices": [
+                "1923",
+                "1900",
+                "1912",
+                "1930"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "Which element has the atomic number 6?",
+            "choices": [
+                "Oxygen",
+                "Carbon",
+                "Nitrogen",
+                "Helium"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "What is the capital city of Canada?",
+            "choices": [
+                "Toronto",
+                "Montreal",
+                "Ottawa",
+                "Vancouver"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "Who is the author of 'One Hundred Years of Solitude'?",
+            "choices": [
+                "Pablo Neruda",
+                "Mario Vargas Llosa",
+                "Gabriel Garcia Marquez",
+                "Jorge Luis Borges"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "What is the capital of Australia?",
+            "choices": [
+                "Sydney",
+                "Melbourne",
+                "Brisbane",
+                "Canberra"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "Which of the following artists is known for the painting 'Guernica'?",
+            "choices": [
+                "Vincent van Gogh",
+                "Claude Monet",
+                "Salvador Dali",
+                "Pablo Picasso"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "Which country was formerly known as Ceylon?",
+            "choices": [
+                "Sri Lanka",
+                "Nepal",
+                "Bangladesh",
+                "Myanmar"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "Which of these elements is a noble gas?",
+            "choices": [
+                "Neon",
+                "Oxygen",
+                "Carbon",
+                "Nitrogen"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "Who was the first woman to fly solo across the Atlantic Ocean?",
+            "choices": [
+                "Bessie Coleman",
+                "Amelia Earhart",
+                "Jacqueline Cochran",
+                "Harriet Quimby"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "What is the hardest natural substance on Earth?",
+            "choices": [
+                "Iron",
+                "Gold",
+                "Platinum",
+                "Diamond"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "What is the capital of Iceland?",
+            "choices": [
+                "Helsinki",
+                "Reykjavik",
+                "Oslo",
+                "Copenhagen"
+            ],
+            "correct_index": 1
+        }
+    ],
+    "Gaming": [
+        {
+            "question": "What is the name of the main character in the video game 'The Legend of Zelda: Breath of the Wild'?",
+            "choices": [
+                "Link",
+                "Zelda",
+                "Ganon",
+                "Ganondorf"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "In 'The Legend of Zelda: Ocarina of Time,' what is the name of the main antagonist?",
+            "choices": [
+                "Dark Link",
+                "Vaati",
+                "Darkseid",
+                "Ganon"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "In 'Final Fantasy VII,' who is the primary protagonist?",
+            "choices": [
+                "Cloud Strife",
+                "Tifa Lockhart",
+                "Barrett Wallace",
+                "Sephiroth"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "What is the name of the fictional continent where 'The Witcher' series is set?",
+            "choices": [
+                "Tamriel",
+                "Thedas",
+                "The Continent",
+                "Eorzea"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "In 'Overwatch,' which hero is known for using a giant hammer and has a pet robot?",
+            "choices": [
+                "Winston",
+                "Bastion",
+                "Reinhardt",
+                "Brigitte"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "In the 'Dark Souls' series, which character is famously known as the 'Chosen Undead'?",
+            "choices": [
+                "Artorias",
+                "Gwynevere",
+                "The Player Character",
+                "Solaire of Astora"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "In 'Bloodborne,' what is the name of the city where the game takes place?",
+            "choices": [
+                "Anor Londo",
+                "Central Yharnam",
+                "Yharnam",
+                "Lothric"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "In 'Metal Gear Solid 2: Sons of Liberty,' which character is revealed to be the main protagonist instead of Raiden?",
+            "choices": [
+                "Big Boss",
+                "Solid Snake",
+                "Otacon",
+                "The Boss"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "In 'Persona 5,' what is the name of the protagonist's Persona?",
+            "choices": [
+                "Ars\u00c3\u00a8ne",
+                "Oberon",
+                "Ishtar",
+                "Skeeter"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "In 'Chrono Trigger,' which of the following characters is from the future?",
+            "choices": [
+                "Robo",
+                "Lucca",
+                "Magus",
+                "Frog"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "In 'The Elder Scrolls V: Skyrim,' which shout is used to launch enemies into the air?",
+            "choices": [
+                "Yol Toor Shul",
+                "Dragonrend",
+                "Throw Voice",
+                "Unrelenting Force"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "In *Dark Souls III*, what is the true identity of the 'Nameless King'?",
+            "choices": [
+                "The son of Gwyn",
+                "The first Firekeeper",
+                "A former king who turned into a dragon",
+                "The God of Thunder"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "In *The Legend of Zelda: Majora's Mask*, what is the name of the mysterious character who appears in the game's final scenes?",
+            "choices": [
+                "Skull Kid",
+                "The Happy Mask Salesman",
+                "The Moon Child",
+                "The Moon's Messenger"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "In *Final Fantasy Tactics*, which character is revealed to have been manipulating the events of the game from behind the scenes?",
+            "choices": [
+                "Delita Heiral",
+                "Algus Sadalfas",
+                "Ramza Beoulve",
+                "Meliadoul Tengille"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "In *Nier: Automata*, which of the following is the true identity of the character known as 'A2'?",
+            "choices": [
+                "The twin sister of 2B",
+                "A corrupted machine lifeform",
+                "A former YoRHa android who rebelled",
+                "The creator of the YoRHa units"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "In *The Witcher 3: Wild Hunt*, what is the name of the entity who serves as the main antagonist of the game?",
+            "choices": [
+                "The Lodge of Sorceresses",
+                "Eredin",
+                "The White Frost",
+                "The Wild Hunt"
+            ],
+            "correct_index": 1
+        }
+    ]
+}
