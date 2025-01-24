@@ -41,6 +41,7 @@ class YTSearchView(discord.ui.View):
             
             for item in self.children:
                 item.disabled = True
+
             await interaction.message.edit(view=self)
             self.stop()
 
@@ -159,7 +160,7 @@ class Music(commands.Cog):
 
     async def _ytdl_extract(self, url: str, requester: discord.Member) -> Optional[list[Track]]:
         ytdl_opts = {
-            'format': 'bestaudio/best',
+            'format': 'bestaudio',
             'noplaylist': True,
             'ignoreerrors': True,
             'quiet': True,
