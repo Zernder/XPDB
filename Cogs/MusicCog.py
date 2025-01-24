@@ -21,45 +21,78 @@ class Track:
         self.requester = requester
 
 class YTSearchView(discord.ui.View):
-    def __init__(self, tracks: list[Track], cog: 'Music', guild_id: int):
+    def __init__(self, tracks, cog, guild_id):
         super().__init__(timeout=30)
         self.tracks = tracks
         self.cog = cog
         self.guild_id = guild_id
+        self.interaction_lock = asyncio.Lock()
         self.message = None
 
+        # Add buttons with song titles
         for idx, track in enumerate(tracks):
-            btn_label = f"{idx+1}. {track.title[:45]}"
-            button = discord.ui.Button(label=btn_label, custom_id=f"track_{idx}")
+            # Truncate title to 75 chars to avoid Discord's 80-character button limit
+            shortened_title = (track.title[:75] + '...') if len(track.title) > 75 else track.title
+            button = discord.ui.Button(
+                label=shortened_title,
+                style=discord.ButtonStyle.secondary,
+                custom_id=str(idx)  # Store track index in custom_id
+            )
             button.callback = self.create_callback(idx)
             self.add_item(button)
 
     def create_callback(self, index: int):
         async def button_callback(interaction: discord.Interaction):
-            selected_track = self.tracks[index]
-            self.cog.queues.setdefault(self.guild_id, []).append(selected_track)
+            try:
+                await interaction.response.defer(ephemeral=False)
+            except discord.errors.NotFound:
+                return
             
-            for item in self.children:
-                item.disabled = True
-            await interaction.message.edit(view=self)
-            self.stop()
+            async with self.interaction_lock:
+                try:
+                    for item in self.children:
+                        item.disabled = True
+                    if self.message:
+                        await self.message.edit(view=self)
 
-            await interaction.response.send_message(f"🎵 Added **{selected_track.title}** to queue")
-            voice_client = await self.cog._get_voice_client(self.guild_id)
-            if voice_client and not voice_client.is_playing():
-                await self.cog._play_next(self.guild_id)
-            
-            if self in self.cog.active_views:
-                self.cog.active_views.remove(self)
+                    selected_track = self.tracks[index]
+                    new_tracks = await self.cog._ytdl_extract(
+                        selected_track.url, 
+                        selected_track.requester
+                    )
+                    
+                    if not new_tracks:
+                        await interaction.followup.send("❌ Track unavailable", ephemeral=True)
+                        return
+                    
+                    actual_track = new_tracks[0]
+                    self.cog.queues.setdefault(self.guild_id, []).append(actual_track)
+                    await interaction.followup.send(f"🎵 Added **{actual_track.title}** to queue")
+
+                    voice_client = await self.cog._get_voice_client(self.guild_id)
+                    if voice_client and not voice_client.is_playing():
+                        await self.cog._play_next(self.guild_id)
+
+                    if self in self.cog.active_views:
+                        self.cog.active_views.remove(self)
+
+                except Exception as e:
+                    print(f"PROCESSING ERROR: {traceback.format_exc()}")
+                    await interaction.followup.send("❌ Failed to process request", ephemeral=True)
+                    
         return button_callback
 
     async def on_timeout(self):
-        for item in self.children:
-            item.disabled = True
-        if self.message:
-            await self.message.edit(view=self)
-        if self in self.cog.active_views:
-            self.cog.active_views.remove(self)
+        try:
+            for item in self.children:
+                item.disabled = True
+            if self.message:
+                await self.message.edit(view=self)
+        except discord.NotFound:
+            pass
+        finally:
+            if self in self.cog.active_views:
+                self.cog.active_views.remove(self)
 
 class Music(commands.Cog):
     def __init__(self, client: commands.Bot):
@@ -70,9 +103,19 @@ class Music(commands.Cog):
         self.volume_levels = {}
         self.user_last_channel = {}
         self.active_views = []
+        self.local_files_cache = []
+        self.refresh_local_files_cache()
+        self.search_lock = asyncio.Lock()
 
         if not os.path.exists("Songs"):
             os.makedirs("Songs")
+
+    def refresh_local_files_cache(self):
+        self.local_files_cache = [
+            (f.lower(), f) 
+            for f in os.listdir("Songs") 
+            if f.endswith(('.mp3', '.m4a', '.flac'))
+        ]
 
     async def _get_voice_client(self, guild_id: int) -> Optional[discord.VoiceClient]:
         guild = self.client.get_guild(guild_id)
@@ -113,11 +156,10 @@ class Music(commands.Cog):
             self.current_tracks[guild_id] = track
 
             try:
-                # Use FFmpegPCMAudio for better compatibility
                 source = FFmpegPCMAudio(
                     track.source,
-                    before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-                    options="-vn -b:a 128k -ac 2"
+                    before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 2",
+                    options="-vn -b:a 128k -threads 4"  
                 )
 
                 def after_playback(error):
@@ -160,60 +202,76 @@ class Music(commands.Cog):
     async def _ytdl_extract(self, url: str, requester: discord.Member) -> Optional[list[Track]]:
         ytdl_opts = {
             'format': 'bestaudio/best',
+            'extract_flat': 'in_playlist',
+            'socket_timeout': 8,
             'noplaylist': True,
-            'ignoreerrors': True,
+            'ignoreerrors': False,
             'quiet': True,
             'no_warnings': True,
-            'socket_timeout': 15,
-            'source_address': '0.0.0.0',
-            'nocheckcertificate': True,
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'best',
-            }],
+            'extractor_args': {
+                'youtube': {
+                    'skip': ['dash', 'hls']
+                }
+            },
+            'match_filter': lambda info: not info.get('is_live'),
             'headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://www.youtube.com/'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept-Language': 'en-US,en;q=0.9'
             }
         }
 
         try:
             with YoutubeDL(ytdl_opts) as ytdl:
-                data = await asyncio.to_thread(ytdl.extract_info, url, download=False)
-                
-                if not data:
-                    return None
+                is_search = url.startswith('ytsearch')
+                data = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        ytdl.extract_info,
+                        url,
+                        download=False,
+                        process=not is_search
+                    ),
+                    timeout=10
+                )
 
-                entries = data.get('entries', [])
-                if url.startswith(('ytsearch', 'ytsearch5:')):
-                    entries = entries[:5]
+                if is_search:
+                    return await self._process_search_results(data, requester)
+                return await self._process_direct_url(data, requester, url)
 
-                valid_tracks = []
-                for entry in entries:
-                    if not entry:
-                        continue
-
-                    try:
-                        track_url = entry.get('url')
-                        if not track_url:
-                            continue
-
-                        valid_tracks.append(Track(
-                            source=track_url,
-                            title=entry.get('title', 'Unknown Track'),
-                            url=entry.get('webpage_url', url),
-                            requester=requester
-                        ))
-                        
-                    except Exception as e:
-                        print(f"Failed to process entry: {str(e)}")
-                        continue
-
-                return valid_tracks
-
-        except Exception as e:
-            print(f"YTDL Error: {str(e)}")
+        except asyncio.TimeoutError:
+            print(f"YTDL timeout for URL: {url}")
             return None
+        except Exception as e:
+            print(f"YTDL Error: {str(e)}\n{traceback.format_exc()}")
+            return None
+
+    async def _process_search_results(self, data, requester):
+        if not data or 'entries' not in data:
+            return None
+
+        entries = list(data['entries'])[:5]
+
+        return [
+            Track(
+                source=f"https://youtu.be/{entry['id']}",
+                title=entry['title'],
+                url=f"https://youtu.be/{entry['id']}",
+                requester=requester
+            )
+            for entry in entries
+            if entry and entry.get('id')
+        ]
+
+    async def _process_direct_url(self, data, requester, original_url):
+        if not data:
+            return None
+
+        track_url = data.get('url') or original_url
+        return [Track(
+            source=track_url,
+            title=data.get('title', 'Unknown Track'),
+            url=data.get('webpage_url', original_url),
+            requester=requester
+        )]
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -233,10 +291,9 @@ class Music(commands.Cog):
         self.volume_levels.setdefault(guild_id, 0.5)
 
         try:
-            # Handle local files
             if not query.startswith(('http://', 'https://')):
-                local_files = [f for f in os.listdir("Songs") if f.endswith(('.mp3', '.m4a', '.flac'))]
-                matched = [f for f in local_files if query.lower() in f.lower()]
+                query_lower = query.lower()
+                matched = [original for (lower, original) in self.local_files_cache if query_lower in lower]
                 
                 if matched:
                     tracks = [
@@ -254,7 +311,6 @@ class Music(commands.Cog):
                         await self._play_next(guild_id)
                     return
 
-            # Handle YouTube content
             if query.startswith(('http://', 'https://')):
                 tracks = await self._ytdl_extract(query, interaction.user)
             else:
@@ -264,7 +320,6 @@ class Music(commands.Cog):
                 await interaction.followup.send(f"🔍 No results found for '{query}'")
                 return
 
-            # Direct URL handling
             if query.startswith(('http://', 'https://')):
                 self.queues.setdefault(guild_id, []).extend(tracks)
                 await interaction.followup.send(f"🎵 Added **{tracks[0].title}** to queue")
@@ -272,7 +327,6 @@ class Music(commands.Cog):
                     await self._play_next(guild_id)
                 return
 
-            # Search results handling
             view = YTSearchView(tracks, self, guild_id)
             view.message = await interaction.followup.send("🎵 Select a track:", view=view)
             self.active_views.append(view)
