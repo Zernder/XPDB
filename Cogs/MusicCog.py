@@ -44,7 +44,7 @@ class YTSearchView(discord.ui.View):
     def create_callback(self, index: int):
         async def button_callback(interaction: discord.Interaction):
             try:
-                await interaction.response.defer(ephemeral=False)
+                await interaction.response.defer(ephemeral=True)
             except discord.errors.NotFound:
                 return
             
@@ -53,7 +53,7 @@ class YTSearchView(discord.ui.View):
                     for item in self.children:
                         item.disabled = True
                     if self.message:
-                        await self.message.edit(view=self)
+                        await self.message.edit(content="✅ Track selected", view=None)
 
                     selected_track = self.tracks[index]
                     new_tracks = await self.cog._ytdl_extract(
@@ -191,7 +191,7 @@ class Music(commands.Cog):
             self.queues.pop(guild_id, None)
             channel = self.user_last_channel.get(guild_id)
             if channel:
-                await channel.send("✅ Queue finished. Disconnecting...")
+                await channel.send("✅ Queue finished. Disconnecting...", ephemeral=True)
 
     async def _handle_playback_error(self, guild_id: int, error: str):
         channel = self.user_last_channel.get(guild_id)
@@ -279,10 +279,10 @@ class Music(commands.Cog):
             self.current_tracks.pop(member.guild.id, None)
             self.queues.pop(member.guild.id, None)
 
-    @app_commands.command(name="play", description="Play music from YouTube or local files")
+    @app_commands.command(name="play_music", description="Play music from YouTube or local files")
     @app_commands.describe(query="YouTube URL/search query or local file name")
     async def play(self, interaction: discord.Interaction, query: str):
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         voice_client = await self._connect_voice(interaction)
         if not voice_client:
             return
@@ -306,7 +306,7 @@ class Music(commands.Cog):
                         for f in matched
                     ]
                     self.queues.setdefault(guild_id, []).extend(tracks)
-                    await interaction.followup.send(f"🎵 Added {len(tracks)} local track(s) to queue")
+                    await interaction.followup.send(f"🎵 Added {len(tracks)} local track(s) to queue", ephemeral=True)
                     if not voice_client.is_playing():
                         await self._play_next(guild_id)
                     return
@@ -317,7 +317,7 @@ class Music(commands.Cog):
                 tracks = await self._ytdl_extract(f"ytsearch5:{query}", interaction.user)
 
             if not tracks:
-                await interaction.followup.send(f"🔍 No results found for '{query}'")
+                await interaction.followup.send(f"🔍 No results found for '{query}'", ephemeral=True)
                 return
 
             if query.startswith(('http://', 'https://')):
@@ -328,43 +328,12 @@ class Music(commands.Cog):
                 return
 
             view = YTSearchView(tracks, self, guild_id)
-            view.message = await interaction.followup.send("🎵 Select a track:", view=view)
+            view.message = await interaction.followup.send("🎵 Select a track:", view=view, ephemeral=True,)
             self.active_views.append(view)
 
         except Exception as e:
-            await interaction.followup.send(f"❌ Error processing request: {str(e)}")
+            await interaction.followup.send(f"❌ Error processing request: {str(e)}", ephemeral=True)
             print(f"Play Command Error: {traceback.format_exc()}")
-
-    @app_commands.command(name="skip", description="Skip the current track")
-    async def skip(self, interaction: discord.Interaction):
-        voice_client = await self._get_voice_client(interaction.guild_id)
-        if voice_client and voice_client.is_playing():
-            voice_client.stop()
-            await interaction.response.send_message("⏭ Skipped current track")
-        else:
-            await interaction.response.send_message("❌ Nothing is currently playing")
-
-    @app_commands.command(name="stop", description="Stop playback and clear queue")
-    async def stop(self, interaction: discord.Interaction):
-        guild_id = interaction.guild_id
-        self.queues[guild_id] = []
-        voice_client = await self._get_voice_client(guild_id)
-        if voice_client:
-            voice_client.stop()
-            await self._disconnect_voice(guild_id)
-        await interaction.response.send_message("⏹ Stopped playback and cleared queue")
-
-    @app_commands.command(name="volume", description="Adjust playback volume (0-100)")
-    @app_commands.describe(level="Volume level (0-100)")
-    async def volume(self, interaction: discord.Interaction, level: app_commands.Range[int, 0, 100]):
-        guild_id = interaction.guild_id
-        self.volume_levels[guild_id] = level / 100
-        voice_client = await self._get_voice_client(guild_id)
-        if voice_client and voice_client.source:
-            voice_client.source.volume = self.volume_levels[guild_id]
-            await interaction.response.send_message(f"🔊 Volume set to {level}%")
-        else:
-            await interaction.response.send_message("❌ Nothing is currently playing")
 
     @app_commands.command(name="nowplaying", description="Show current track info")
     async def nowplaying(self, interaction: discord.Interaction):
@@ -377,6 +346,60 @@ class Music(commands.Cog):
             await interaction.response.send_message(embed=embed)
         else:
             await interaction.response.send_message("❌ Nothing is currently playing")
+
+    # Add this command to the Music cog class
+    @app_commands.command(name="queue", description="Show the current playlist")
+    async def queue(self, interaction: discord.Interaction):
+        """Displays the current queue ephemerally"""
+        queue = self.queues.get(interaction.guild_id, [])
+        if not queue:
+            await interaction.response.send_message("ℹ️ The queue is empty.", ephemeral=True)
+            return
+
+        embed = discord.Embed(title="Current Queue", color=0x00ff00)
+        for idx, track in enumerate(queue[:10], 1):  # Show up to 10 tracks
+            embed.add_field(
+                name=f"{idx}. {track.title[:50]}...",
+                value=f"Requested by {track.requester.mention}",
+                inline=False
+            )
+        
+        if len(queue) > 10:
+            embed.set_footer(text=f"And {len(queue)-10} more tracks...")
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+    # @app_commands.command(name="skip", description="Skip the current track")
+    # async def skip(self, interaction: discord.Interaction):
+    #     voice_client = await self._get_voice_client(interaction.guild_id)
+    #     if voice_client and voice_client.is_playing():
+    #         voice_client.stop()
+    #         await interaction.response.send_message("⏭ Skipped current track")
+    #     else:
+    #         await interaction.response.send_message("❌ Nothing is currently playing")
+
+    # @app_commands.command(name="stop", description="Stop playback and clear queue")
+    # async def stop(self, interaction: discord.Interaction):
+    #     guild_id = interaction.guild_id
+    #     self.queues[guild_id] = []
+    #     voice_client = await self._get_voice_client(guild_id)
+    #     if voice_client:
+    #         voice_client.stop()
+    #         await self._disconnect_voice(guild_id)
+    #     await interaction.response.send_message("⏹ Stopped playback and cleared queue")
+
+    # @app_commands.command(name="volume", description="Adjust playback volume (0-100)")
+    # @app_commands.describe(level="Volume level (0-100)")
+    # async def volume(self, interaction: discord.Interaction, level: app_commands.Range[int, 0, 100]):
+    #     guild_id = interaction.guild_id
+    #     self.volume_levels[guild_id] = level / 100
+    #     voice_client = await self._get_voice_client(guild_id)
+    #     if voice_client and voice_client.source:
+    #         voice_client.source.volume = self.volume_levels[guild_id]
+    #         await interaction.response.send_message(f"🔊 Volume set to {level}%")
+    #     else:
+    #         await interaction.response.send_message("❌ Nothing is currently playing")
 
 async def setup(client: commands.Bot):
     await client.add_cog(Music(client))

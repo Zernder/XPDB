@@ -1,1 +1,12 @@
-Multiple -ac options specified for stream 0, only the last option '-ac 2' will be used.
+INFO:root:Loading RPG data...
+INFO:discord.client:logging in using static token
+INFO:discord.gateway:Shard ID None has connected to Gateway (Session ID: 7f73d7d8a0fc85164cffb7bd37cf9de9).
+ERROR:discord.client:Ignoring exception in on_ready
+Traceback (most recent call last):
+  File "/home/xanmal/xanfiles/servers/Xanrean-Echo/.venv/lib/python3.10/site-packages/discord/client.py", line 449, in _run_event
+    await coro(*args, **kwargs)
+  File "/home/xanmal/xanfiles/servers/Xanrean-Echo/main.py", line 200, in on_ready
+    await super().on_ready()
+  File "/home/xanmal/xanfiles/servers/Xanrean-Echo/main.py", line 148, in on_ready
+    channel = discord.utils.get(name=self.chatChannel)
+TypeError: get() missing 1 required positional argument: 'iterable'

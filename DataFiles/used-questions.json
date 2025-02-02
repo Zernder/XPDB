@@ -1,4 +1,141 @@
 {
-    "General Knowledge": [],
+    "General Knowledge": [
+        {
+            "question": "Which scientist is known for the theory of general relativity?",
+            "choices": [
+                "Albert Einstein",
+                "Isaac Newton",
+                "Nikola Tesla",
+                "Marie Curie"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "Which city is home to the ancient landmark 'The Colosseum'?",
+            "choices": [
+                "Athens",
+                "Cairo",
+                "Paris",
+                "Rome"
+            ],
+            "correct_index": 3
+        },
+        {
+            "question": "Who is the author of 'One Hundred Years of Solitude'?",
+            "choices": [
+                "Pablo Neruda",
+                "Mario Vargas Llosa",
+                "Gabriel Garcia Marquez",
+                "Jorge Luis Borges"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "Who was the first emperor of China?",
+            "choices": [
+                "Han Wudi",
+                "Qin Shi Huang",
+                "Cao Cao",
+                "Sun Tzu"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "Which planet is known as the Red Planet?",
+            "choices": [
+                "Mars",
+                "Jupiter",
+                "Venus",
+                "Saturn"
+            ],
+            "correct_index": 0
+        },
+        {
+            "question": "What is the capital city of Canada?",
+            "choices": [
+                "Toronto",
+                "Montreal",
+                "Ottawa",
+                "Vancouver"
+            ],
+            "correct_index": 2
+        },
+        {
+            "question": "What is the capital of Iceland?",
+            "choices": [
+                "Helsinki",
+                "Reykjavik",
+                "Oslo",
+                "Copenhagen"
+            ],
+            "correct_index": 1
+        },
+        {
+            "question": "When someone is cowardly, they are said to have what color belly?",
+            "choices": [
+                "Green",
+                "Red",
+                "Blue",
+                "Yellow"
+            ],
+            "correct_index": 3,
+            "category": "General Knowledge"
+        },
+        {
+            "question": "In the Morse code, which letter is indicated by 3 dots? ",
+            "choices": [
+                "O",
+                "S",
+                "A",
+                "C"
+            ],
+            "correct_index": 1,
+            "category": "General Knowledge"
+        },
+        {
+            "question": "Five dollars is worth how many nickles?",
+            "choices": [
+                "25",
+                "69",
+                "100",
+                "50"
+            ],
+            "correct_index": 2,
+            "category": "General Knowledge"
+        },
+        {
+            "question": "According to Sherlock Holmes, \"If you eliminate the impossible, whatever remains, however improbable, must be the...\"",
+            "choices": [
+                "Source",
+                "Answer",
+                "Cause",
+                "Truth"
+            ],
+            "correct_index": 3,
+            "category": "General Knowledge"
+        },
+        {
+            "question": "Which sign of the zodiac is represented by the Crab?",
+            "choices": [
+                "Cancer",
+                "Libra",
+                "Virgo",
+                "Sagittarius"
+            ],
+            "correct_index": 0,
+            "category": "General Knowledge"
+        },
+        {
+            "question": "In 2013 how much money was lost by Nigerian scams?",
+            "choices": [
+                "$95 Million",
+                "$12.7 Billion",
+                "$2.7 Billion",
+                "$956 Million"
+            ],
+            "correct_index": 1,
+            "category": "General Knowledge"
+        }
+    ],
     "Gaming": []
 }

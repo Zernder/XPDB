@@ -1,0 +1,28 @@
+{
+    "items": [
+        {
+            "name": "potion",
+            "price": 50,
+            "stock": 49,
+            "type": "heal"
+        },
+        {
+            "name": "sword",
+            "price": 100,
+            "stock": 4,
+            "type": "weapon"
+        },
+        {
+            "name": "shield",
+            "price": 80,
+            "stock": 5,
+            "type": "armor"
+        },
+        {
+            "name": "rare_artifact",
+            "price": 500,
+            "stock": 1,
+            "type": "special"
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+[
+    {"name": "Goblin", "min_level": 1, "max_level": 5, "health": 50, "attack": 5},
+    {"name": "Rat", "min_level": 1, "max_level": 3, "health": 20, "attack": 2},
+    {"name": "Giant Spider", "min_level": 1, "max_level": 4, "health": 25, "attack": 3},
+    {"name": "Skeleton", "min_level": 2, "max_level": 5, "health": 35, "attack": 4},
+    {"name": "Slime", "min_level": 1, "max_level": 3, "health": 30, "attack": 2},
+    {"name": "Wolf", "min_level": 2, "max_level": 5, "health": 40, "attack": 5},
+    {"name": "Kobold", "min_level": 1, "max_level": 5, "health": 45, "attack": 4},
+    {"name": "Giant Bat", "min_level": 1, "max_level": 4, "health": 22, "attack": 3},
+    {"name": "Zombie", "min_level": 2, "max_level": 6, "health": 50, "attack": 4},
+    {"name": "Imp", "min_level": 1, "max_level": 4, "health": 25, "attack": 3},
+
+    {"name": "Orc", "min_level": 3, "max_level": 8, "health": 80, "attack": 8},
+    {"name": "Hobgoblin", "min_level": 5, "max_level": 10, "health": 70, "attack": 7},
+    {"name": "Wight", "min_level": 6, "max_level": 12, "health": 85, "attack": 8},
+    {"name": "Ogre", "min_level": 7, "max_level": 14, "health": 100, "attack": 10},
+    {"name": "Troll", "min_level": 8, "max_level": 15, "health": 120, "attack": 12},
+
+    {"name": "Dragon", "min_level": 10, "max_level": 20, "health": 200, "attack": 15},
+    {"name": "Lich", "min_level": 15, "max_level": 20, "health": 180, "attack": 14},
+    {"name": "Kraken", "min_level": 20, "max_level": 25, "health": 250, "attack": 18}
+]

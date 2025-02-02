@@ -213,33 +213,51 @@ class Cog:
         self.client = client
 
     async def load_cogs(self):
+        # First unload ALL possible cogs
+        await self.remove_cogs()
+        
+        # Then load specific ones per bot
         if args.bot == "tama":
             await self.client.load_extension('Cogs.ModerationCog')
             await self.client.load_extension('Cogs.MusicCog')
-
+            await self.client.load_extension('Cogs.RPGCog')
+            print("Loaded Tama cogs: Moderation, Music, RPG")
         elif args.bot == "saki":
             await self.client.load_extension('Cogs.ModerationCog')
             await self.client.load_extension('Cogs.QuizCog')
-            
+            print("Loaded Saki cogs: Moderation, Quiz")
 
     async def remove_cogs(self):
-        await self.client.remove_cog('Cogs.ModerationCog')
-        await self.client.remove_cog('Cogs.MusicCog')
-        await self.client.remove_cog('Cogs.QuizCog')
-
-    async def reloadcogs(self):
-        await self.client.reload_extension('Cogs.ModerationCog')
-        await self.client.reload_extension('Cogs.MusicCog')
-        await self.client.reload_extension('Cogs.QuizCog')
+        # List of ALL possible cogs
+        all_cogs = [
+            'Cogs.ModerationCog',
+            'Cogs.MusicCog',
+            'Cogs.QuizCog',
+            'Cogs.RPGCog'
+        ]
+        
+        # Unload every cog safely
+        for cog in all_cogs:
+            try:
+                await self.client.unload_extension(cog)
+                print(f"Unloaded {cog}")
+            except commands.ExtensionNotLoaded:
+                continue
 
 async def main():
     if args.bot == "tama":
         bot = TamaBot()
     elif args.bot == "saki":
         bot = SakiBot()
-    await Cog.remove_cogs(bot)
-    await Cog.load_cogs(bot)
-    print(f"{args.bot.capitalize()} Online")
+    
+    # Initialize cog manager with THIS bot's client
+    cog_manager = Cog(bot.client)
+    
+    # Load fresh cogs for this bot
+    await cog_manager.load_cogs()
+    
+    print(f"\n{args.bot.capitalize()} Online!")
+    
     await bot.client.start(bot.token)
 
 if __name__ == "__main__":

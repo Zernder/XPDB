@@ -1,0 +1,31 @@
+{
+    "175421668850794506": {
+        "level": 1,
+        "health": 28,
+        "max_health": 100,
+        "stamina": 100,
+        "max_stamina": 100,
+        "mana": 100,
+        "max_mana": 100,
+        "attack": 10,
+        "defense": 10,
+        "experience": 20,
+        "gold": 29,
+        "inventory": {
+            "sword": 1,
+            "potion": 2
+        },
+        "cooldowns": {
+            "explore": 1738344625.598248,
+            "battle": 1738020420.66522
+        },
+        "skills": [],
+        "current_monster": {
+            "name": "Giant Bat",
+            "min_level": 1,
+            "max_level": 4,
+            "health": 22,
+            "attack": 3
+        }
+    }
+}
